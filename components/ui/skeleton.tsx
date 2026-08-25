@@ -1,4 +1,4 @@
-import { cn } from "@/registry/radix-nova/lib/utils"
+import { cn } from "@/lib/utils"
 
 function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
   return (
