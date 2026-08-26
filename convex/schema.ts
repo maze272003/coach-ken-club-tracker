@@ -30,7 +30,9 @@ export default defineSchema({
       v.literal("absent"),
     ),
     updatedAt: v.number(),
-  }).index("by_student_and_date", ["studentId", "date"]),
+  })
+    .index("by_student_and_date", ["studentId", "date"])
+    .index("by_date", ["date"]),
   trainingSessions: defineTable({
     studentId: v.id("students"),
     date: v.string(),

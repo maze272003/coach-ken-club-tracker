@@ -3,7 +3,7 @@ import { ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireCoach, requireStudent, resolveStudentAccess } from "./lib/access";
 import { attendanceStats } from "./lib/stats";
-import { assertDateString } from "./lib/validation";
+import { assertDateString, assertMonthString } from "./lib/validation";
 
 const NOT_AUTHORIZED = "Not authorized";
 
@@ -139,6 +139,54 @@ export const my = query({
         status: r.status,
       })),
     };
+  },
+});
+
+/**
+ * Coach-only: per-day attendance counts for a whole month ("YYYY-MM"),
+ * so the calendar can badge days that already have roll call recorded.
+ */
+export const monthSummary = query({
+  args: { month: v.string() },
+  returns: v.record(
+    v.string(),
+    v.object({
+      present: v.number(),
+      late: v.number(),
+      absent: v.number(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const coach = await requireCoach(ctx);
+    if (!coach) throw new ConvexError(NOT_AUTHORIZED);
+    assertMonthString(args.month);
+
+    const [year, month] = args.month.split("-").map(Number);
+    const nextMonth =
+      month === 12
+        ? `${year + 1}-01-01`
+        : `${year}-${String(month + 1).padStart(2, "0")}-01`;
+
+    const rows = await ctx.db
+      .query("attendance")
+      .withIndex("by_date", (q) =>
+        q.gte("date", `${args.month}-01`).lt("date", nextMonth),
+      )
+      .take(2000);
+
+    const summary: Record<
+      string,
+      { present: number; late: number; absent: number }
+    > = {};
+    for (const row of rows) {
+      const entry = (summary[row.date] ??= {
+        present: 0,
+        late: 0,
+        absent: 0,
+      });
+      entry[row.status] += 1;
+    }
+    return summary;
   },
 });
 

@@ -18,6 +18,17 @@ export function assertDateString(value: string): void {
   }
 }
 
+const MONTH_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/**
+ * Months are passed around as "YYYY-MM" strings.
+ */
+export function assertMonthString(value: string): void {
+  if (!MONTH_REGEX.test(value)) {
+    throw new ConvexError("Invalid month: expected YYYY-MM");
+  }
+}
+
 export function assertProgress(value: number): void {
   if (!Number.isInteger(value) || value < 0 || value > 100) {
     throw new ConvexError("Progress must be a whole number between 0 and 100");
