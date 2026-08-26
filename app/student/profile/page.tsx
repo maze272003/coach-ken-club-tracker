@@ -209,7 +209,7 @@ export default function StudentProfilePage() {
               hint={
                 summary.overallProgress === null
                   ? "No progress recorded yet"
-                  : "Average across your strokes"
+                  : "Average across your skills"
               }
             />
           </div>

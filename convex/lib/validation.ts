@@ -64,3 +64,29 @@ export function assertPassword(value: string): void {
     throw new ConvexError("Password must be between 8 and 128 characters");
   }
 }
+
+export function normalizeSkillName(value: string): string {
+  const name = value.trim().replace(/\s+/g, " ");
+  if (name.length === 0 || name.length > 60) {
+    throw new ConvexError("Skill name must be between 1 and 60 characters");
+  }
+  return name;
+}
+
+/**
+ * Stable identifier for a skill, derived from its name. Existing
+ * records (student progress, training sessions) reference this key,
+ * so it never changes once created — renaming only changes `name`.
+ */
+export function slugifySkillName(value: string): string {
+  const slug = value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+  if (slug.length === 0) {
+    throw new ConvexError("Skill name must contain letters or numbers");
+  }
+  return slug;
+}

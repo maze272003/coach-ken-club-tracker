@@ -15,7 +15,6 @@ import type * as goals from "../goals.js";
 import type * as http from "../http.js";
 import type * as lib_access from "../lib/access.js";
 import type * as lib_stats from "../lib/stats.js";
-import type * as lib_strokes from "../lib/strokes.js";
 import type * as lib_validation from "../lib/validation.js";
 import type * as seed from "../seed.js";
 import type * as skills from "../skills.js";
@@ -37,7 +36,6 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/access": typeof lib_access;
   "lib/stats": typeof lib_stats;
-  "lib/strokes": typeof lib_strokes;
   "lib/validation": typeof lib_validation;
   seed: typeof seed;
   skills: typeof skills;

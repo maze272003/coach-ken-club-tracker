@@ -1,16 +1,3 @@
-export const STROKES = [
-  { key: "freestyle", label: "Freestyle" },
-  { key: "backstroke", label: "Backstroke" },
-  { key: "breaststroke", label: "Breaststroke" },
-  { key: "butterfly", label: "Butterfly" },
-] as const;
-
-export type StrokeKey = (typeof STROKES)[number]["key"];
-
-export function strokeLabel(key: string): string {
-  return STROKES.find((s) => s.key === key)?.label ?? key;
-}
-
 /**
  * Formats a "YYYY-MM-DD" date for display without timezone surprises.
  */

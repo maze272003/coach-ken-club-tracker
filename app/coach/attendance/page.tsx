@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { errorMessage, formatDate, todayDateString } from "@/lib/format";
+import { ExportAttendanceDialog } from "@/components/coach/export-attendance-dialog";
 
 const statusButtons = [
   { value: "present", label: "Present" },
@@ -80,6 +81,7 @@ export default function CoachAttendancePage() {
       <PageHeader
         title="Attendance"
         description="Pick a date on the calendar to view and record roll call."
+        actions={<ExportAttendanceDialog />}
       />
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(300px,340px)_minmax(0,1fr)]">

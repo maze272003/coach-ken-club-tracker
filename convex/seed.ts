@@ -172,6 +172,8 @@ export const seed = action({
       );
     }
 
+    await ctx.runMutation(internal.skills.backfill, {});
+
     for (const demo of DEMO_STUDENTS) {
       const created = await createAccount(ctx, {
         provider: "password",

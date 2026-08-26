@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireCoach, requireStudent, resolveStudentAccess } from "./lib/access";
-import { assertStroke } from "./lib/strokes";
+import { assertExistingSkillKeys } from "./skills";
 import { assertDateString, assertDuration } from "./lib/validation";
 
 const NOT_AUTHORIZED = "Not authorized";
@@ -40,10 +40,7 @@ function validateSessionFields(args: {
   assertDuration(args.durationMinutes);
   const strokes = [...new Set(args.strokes)];
   if (strokes.length === 0) {
-    throw new ConvexError("Select at least one stroke");
-  }
-  for (const stroke of strokes) {
-    assertStroke(stroke);
+    throw new ConvexError("Select at least one skill");
   }
   if (args.notes !== undefined && args.notes.trim().length > 2000) {
     throw new ConvexError("Notes must be at most 2000 characters");
@@ -70,6 +67,7 @@ export const create = mutation({
     if (!student) throw new ConvexError("Student not found");
 
     const fields = validateSessionFields(args);
+    await assertExistingSkillKeys(ctx, fields.strokes);
     const sessionId = await ctx.db.insert("trainingSessions", {
       studentId: args.studentId,
       ...fields,
@@ -92,6 +90,7 @@ export const update = mutation({
     if (!session) throw new ConvexError("Training session not found");
 
     const fields = validateSessionFields(args);
+    await assertExistingSkillKeys(ctx, fields.strokes);
     await ctx.db.patch("trainingSessions", args.sessionId, {
       ...fields,
       updatedAt: Date.now(),

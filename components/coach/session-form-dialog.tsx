@@ -28,7 +28,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { STROKES, errorMessage, todayDateString } from "@/lib/format";
+import { useSkillCatalog } from "@/lib/use-skill-catalog";
+import { errorMessage, todayDateString } from "@/lib/format";
 
 const sessionSchema = z.object({
   studentId: z.string().min(1, "Select a student"),
@@ -39,7 +40,7 @@ const sessionSchema = z.object({
     .int("Duration must be a whole number")
     .positive("Duration must be positive")
     .max(1440, "Duration must be at most 1440 minutes"),
-  strokes: z.array(z.string()).min(1, "Select at least one stroke"),
+  strokes: z.array(z.string()).min(1, "Select at least one skill"),
   notes: z.string().trim().max(2000, "Notes must be at most 2000 characters"),
 });
 
@@ -82,10 +83,20 @@ export function SessionFormDialog({
     api.students.list,
     fixedStudentId !== undefined ? "skip" : {},
   );
+  const { skills, active, isLoading: skillsLoading } = useSkillCatalog();
   const createSession = useMutation(api.training.create);
   const updateSession = useMutation(api.training.update);
 
   const editing = sessionId !== undefined;
+
+  // Active skills are pickable; archived skills stay pickable only
+  // when already selected (editing a historical session).
+  const selectable = [
+    ...active,
+    ...skills.filter(
+      (s) => s.status === "archived" && form.strokes.includes(s.key),
+    ),
+  ];
 
   function update<K extends keyof SessionFormValues>(
     key: K,
@@ -238,21 +249,29 @@ export function SessionFormDialog({
             ) : null}
           </div>
           <fieldset className="flex flex-col gap-2" disabled={submitting}>
-            <legend className="text-sm font-medium">Strokes</legend>
-            <div className="flex flex-wrap gap-3">
-              {STROKES.map((stroke) => (
-                <label
-                  key={stroke.key}
-                  className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 text-sm has-[button[data-state=checked]]:border-primary"
-                >
-                  <Checkbox
-                    checked={form.strokes.includes(stroke.key)}
-                    onCheckedChange={() => toggleStroke(stroke.key)}
-                  />
-                  {stroke.label}
-                </label>
-              ))}
-            </div>
+            <legend className="text-sm font-medium">Skills</legend>
+            {skillsLoading ? (
+              <p className="text-xs text-muted-foreground">Loading skills…</p>
+            ) : selectable.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No skills available yet — add skills on the Skills page.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-3">
+                {selectable.map((skill) => (
+                  <label
+                    key={skill.key}
+                    className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 text-sm has-[button[data-state=checked]]:border-primary"
+                  >
+                    <Checkbox
+                      checked={form.strokes.includes(skill.key)}
+                      onCheckedChange={() => toggleStroke(skill.key)}
+                    />
+                    {skill.name}
+                  </label>
+                ))}
+              </div>
+            )}
             {fieldErrors.strokes ? (
               <p className="text-xs text-destructive">{fieldErrors.strokes}</p>
             ) : null}

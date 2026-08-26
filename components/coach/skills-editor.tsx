@@ -11,27 +11,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
-import { STROKES, errorMessage } from "@/lib/format";
+import { useSkillCatalog } from "@/lib/use-skill-catalog";
+import { errorMessage } from "@/lib/format";
 
 type ProgressMap = Record<string, number>;
 
-function initialMap(skills: { stroke: string; progress: number }[]): ProgressMap {
-  const map: ProgressMap = {};
-  for (const skill of skills) {
-    map[skill.stroke] = skill.progress;
-  }
-  for (const stroke of STROKES) {
-    if (map[stroke.key] === undefined) map[stroke.key] = 0;
-  }
-  return map;
-}
-
 /**
- * Coach-only editor for a student's stroke skill progress.
- * Saves all strokes in one submit. The draft starts from the server
- * values and is held locally until saved.
+ * Coach-only editor for a student's skill progress. Rows come from
+ * the active skill catalog; skills without a record yet default to 0
+ * and are created on save. Only changed values are written.
  */
 export function SkillsEditor({ studentId }: { studentId: string }) {
+  const { active, isLoading: catalogLoading } = useSkillCatalog();
   const skills = useQuery(api.skills.listForStudent, {
     studentId: studentId as never,
   });
@@ -41,24 +32,25 @@ export function SkillsEditor({ studentId }: { studentId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const values: ProgressMap =
-    draft ??
-    (skills === undefined ? Object.fromEntries(STROKES.map((s) => [s.key, 0])) : initialMap(skills));
+  const serverValues: ProgressMap = {};
+  for (const skill of skills ?? []) {
+    serverValues[skill.key] = skill.progress;
+  }
+
+  const values: ProgressMap = draft ?? serverValues;
 
   const dirty =
-    skills !== undefined &&
     draft !== null &&
-    (skills.length !== Object.keys(draft).length ||
-      skills.some(
-        (s) => draft[s.stroke] !== undefined && draft[s.stroke] !== s.progress,
-      ));
+    active.some(
+      (skill) => (draft[skill.key] ?? 0) !== (serverValues[skill.key] ?? 0),
+    );
 
-  function setStroke(stroke: string, value: string) {
+  function setSkill(key: string, value: string) {
     const clamped = value === "" ? 0 : Math.min(100, Math.max(0, Number(value)));
     if (Number.isNaN(clamped)) return;
     setDraft((prev) => ({
       ...(prev ?? values),
-      [stroke]: Math.round(clamped),
+      [key]: Math.round(clamped),
     }));
   }
 
@@ -67,14 +59,20 @@ export function SkillsEditor({ studentId }: { studentId: string }) {
     setError(null);
     setSaving(true);
     try {
-      for (const [stroke, progress] of Object.entries(draft)) {
+      const changed = active.filter(
+        (skill) =>
+          (draft[skill.key] ?? 0) !== (serverValues[skill.key] ?? 0) &&
+          (serverValues[skill.key] !== undefined || (draft[skill.key] ?? 0) > 0),
+      );
+      for (const skill of changed) {
         await setProgress({
           studentId: studentId as never,
-          stroke,
-          progress,
+          key: skill.key,
+          progress: draft[skill.key] ?? 0,
         });
       }
-      toast.success("Stroke skills updated.");
+      toast.success("Skill progress updated.");
+      setDraft(null);
       setSaving(false);
     } catch (err) {
       setError(
@@ -89,7 +87,7 @@ export function SkillsEditor({ studentId }: { studentId: string }) {
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Gauge className="size-4 text-muted-foreground" aria-hidden="true" />
-          Stroke Skills
+          Skill Progress
         </CardTitle>
         <Button size="sm" onClick={handleSave} disabled={saving || !dirty}>
           {saving ? "Saving…" : "Save Changes"}
@@ -101,29 +99,29 @@ export function SkillsEditor({ studentId }: { studentId: string }) {
             {error}
           </p>
         ) : null}
-        {skills === undefined ? (
+        {catalogLoading || skills === undefined ? (
           <div className="space-y-4">
-            {STROKES.map((stroke) => (
-              <div key={stroke.key} className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="space-y-2">
                 <Skeleton className="h-4 w-32" />
                 <Skeleton className="h-2 w-full" />
               </div>
             ))}
           </div>
-        ) : skills.length === 0 ? (
+        ) : active.length === 0 ? (
           <EmptyState
             icon={Gauge}
-            title="No skill records yet"
-            description="Stroke skills are created when a student account is created."
+            title="No skills yet"
+            description="Add skill programs in the Skill Library to start tracking progress."
             className="border-0 py-4"
           />
         ) : (
-          STROKES.map((stroke) => {
-            const value = values[stroke.key] ?? 0;
+          active.map((skill) => {
+            const value = values[skill.key] ?? 0;
             return (
-              <div key={stroke.key} className="space-y-1.5">
+              <div key={skill.key} className="space-y-1.5">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-medium">{stroke.label}</span>
+                  <span className="text-sm font-medium">{skill.name}</span>
                   <div className="flex items-center gap-2">
                     <Progress
                       value={value}
@@ -136,9 +134,9 @@ export function SkillsEditor({ studentId }: { studentId: string }) {
                       max={100}
                       step={1}
                       value={value}
-                      onChange={(e) => setStroke(stroke.key, e.target.value)}
+                      onChange={(e) => setSkill(skill.key, e.target.value)}
                       className="h-8 w-20 text-right tabular-nums"
-                      aria-label={`${stroke.label} progress (0 to 100 percent)`}
+                      aria-label={`${skill.name} progress (0 to 100 percent)`}
                       disabled={saving}
                     />
                     <span className="text-sm text-muted-foreground">%</span>

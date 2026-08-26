@@ -94,6 +94,11 @@ async function studentNameFor(
 
 async function buildRecentActivity(ctx: QueryCtx) {
   const nameCache = new Map<string, string>();
+  const catalog = await ctx.db.query("skills").withIndex("by_key").take(500);
+  const skillNameCache = new Map(
+    catalog.map((skill) => [skill.key, skill.name]),
+  );
+  const skillNameByKey = (key: string) => skillNameCache.get(key) ?? key;
 
   const [attendance, sessions, skills, goals] = await Promise.all([
     ctx.db.query("attendance").order("desc").take(2),
@@ -135,7 +140,7 @@ async function buildRecentActivity(ctx: QueryCtx) {
     items.push({
       kind: "skill",
       studentId: skill.studentId,
-      detail: `${skill.stroke} skill progress updated to ${skill.progress}%`,
+      detail: `${skillNameByKey(skill.stroke)} skill progress updated to ${skill.progress}%`,
       atMs: skill._creationTime,
     });
   }
@@ -180,7 +185,8 @@ export const studentDashboard = query({
     overallProgress: v.union(v.number(), v.null()),
     skills: v.array(
       v.object({
-        stroke: v.string(),
+        key: v.string(),
+        name: v.string(),
         progress: v.number(),
         updatedAtMs: v.number(),
       }),
@@ -217,36 +223,48 @@ export const studentDashboard = query({
     if (!self) throw new ConvexError(NOT_AUTHORIZED);
     const studentId = self.student._id;
 
-    const [attendance, progress, skills, sessions, goals] = await Promise.all([
-      attendanceStats(ctx, studentId),
-      overallProgress(ctx, studentId),
-      ctx.db
-        .query("strokeSkills")
-        .withIndex("by_student_and_stroke", (q) => q.eq("studentId", studentId))
-        .take(100),
-      ctx.db
-        .query("trainingSessions")
-        .withIndex("by_student_and_date", (q) => q.eq("studentId", studentId))
-        .order("desc")
-        .take(3),
-      ctx.db
-        .query("trainingGoals")
-        .withIndex("by_student_and_updated", (q) => q.eq("studentId", studentId))
-        .order("desc")
-        .take(50),
-    ]);
+    const [attendance, progress, skills, catalog, sessions, goals] =
+      await Promise.all([
+        attendanceStats(ctx, studentId),
+        overallProgress(ctx, studentId),
+        ctx.db
+          .query("strokeSkills")
+          .withIndex("by_student_and_stroke", (q) => q.eq("studentId", studentId))
+          .take(100),
+        ctx.db.query("skills").withIndex("by_key").take(500),
+        ctx.db
+          .query("trainingSessions")
+          .withIndex("by_student_and_date", (q) => q.eq("studentId", studentId))
+          .order("desc")
+          .take(3),
+        ctx.db
+          .query("trainingGoals")
+          .withIndex("by_student_and_updated", (q) => q.eq("studentId", studentId))
+          .order("desc")
+          .take(50),
+      ]);
 
     const currentGoal =
       goals.find((g) => g.status !== "completed") ?? goals[0] ?? null;
 
+    const activeSkillNames = new Map(
+      catalog
+        .filter((s) => s.status === "active")
+        .map((s) => [s.key, s.name]),
+    );
+
     return {
       attendance,
       overallProgress: progress,
-      skills: skills.map((s) => ({
-        stroke: s.stroke,
-        progress: s.progress,
-        updatedAtMs: s.updatedAt,
-      })),
+      skills: skills
+        .filter((s) => activeSkillNames.has(s.stroke))
+        .map((s) => ({
+          key: s.stroke,
+          name: activeSkillNames.get(s.stroke)!,
+          progress: s.progress,
+          updatedAtMs: s.updatedAt,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
       recentSessions: sessions.map((s) => ({
         _id: s._id,
         date: s.date,

@@ -16,6 +16,14 @@ export default defineSchema({
   })
     .index("email", ["email"])
     .index("phone", ["phone"]),
+  skills: defineTable({
+    key: v.string(),
+    name: v.string(),
+    status: v.union(v.literal("active"), v.literal("archived")),
+    updatedAt: v.number(),
+  })
+    .index("by_key", ["key"])
+    .index("by_status", ["status"]),
   students: defineTable({
     userId: v.id("users"),
     status: v.union(v.literal("active"), v.literal("inactive")),

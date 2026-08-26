@@ -40,19 +40,26 @@ export async function attendanceStats(
 }
 
 /**
- * Overall training progress = average of the student's stroke skill
- * progress values. Returns null when no skill records exist
- * ("no progress recorded yet" instead of a misleading 0%).
+ * Overall training progress = average of the student's skill progress
+ * values across ACTIVE skills only (archived skill programs stop
+ * counting). Returns null when there is nothing to average.
  */
 export async function overallProgress(
   ctx: QueryCtx,
   studentId: Id<"students">,
 ): Promise<number | null> {
-  const skills = await ctx.db
-    .query("strokeSkills")
-    .withIndex("by_student_and_stroke", (q) => q.eq("studentId", studentId))
-    .take(100);
-  if (skills.length === 0) return null;
-  const sum = skills.reduce((acc, s) => acc + s.progress, 0);
-  return Math.round(sum / skills.length);
+  const [skills, catalog] = await Promise.all([
+    ctx.db
+      .query("strokeSkills")
+      .withIndex("by_student_and_stroke", (q) => q.eq("studentId", studentId))
+      .take(100),
+    ctx.db.query("skills").withIndex("by_key").take(500),
+  ]);
+  const activeKeys = new Set(
+    catalog.filter((s) => s.status === "active").map((s) => s.key),
+  );
+  const relevant = skills.filter((s) => activeKeys.has(s.stroke));
+  if (relevant.length === 0) return null;
+  const sum = relevant.reduce((acc, s) => acc + s.progress, 0);
+  return Math.round(sum / relevant.length);
 }

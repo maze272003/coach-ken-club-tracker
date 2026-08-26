@@ -8,7 +8,6 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ProgressRow } from "@/components/shared/progress-row";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { strokeLabel } from "@/lib/format";
 
 export default function StudentSkillsPage() {
   const skills = useQuery(api.skills.my, {});
@@ -17,7 +16,7 @@ export default function StudentSkillsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Skills"
-        description="Your stroke skill progress, updated by your coach."
+        description="Your skill progress, updated by your coach."
       />
 
       {skills === undefined ? (
@@ -35,15 +34,15 @@ export default function StudentSkillsPage() {
         <EmptyState
           icon={Gauge}
           title="No skills recorded yet"
-          description="Your coach will record your stroke progress here."
+          description="Your coach will record your skill progress here."
         />
       ) : (
         <Card>
           <CardContent className="space-y-5">
             {skills.map((skill) => (
               <ProgressRow
-                key={skill.stroke}
-                label={strokeLabel(skill.stroke)}
+                key={skill.key}
+                label={skill.name}
                 value={skill.progress}
               />
             ))}

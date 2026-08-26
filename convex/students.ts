@@ -16,7 +16,6 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { requireCoach, requireStudent } from "./lib/access";
 import { attendanceStats, overallProgress } from "./lib/stats";
-import { STROKES } from "./lib/strokes";
 import {
   assertPassword,
   normalizeEmail,
@@ -309,27 +308,19 @@ function assertImageUrl(value: string): string {
 }
 
 /**
- * Internal: creates the student profile row and seeds the initial
- * stroke skill records (progress 0) in one transaction.
+ * Internal: creates the student profile row. Skill progress records
+ * are created on demand when the coach first saves progress for a
+ * skill from the catalog.
  */
 export const createProfile = internalMutation({
   args: { userId: v.id("users"), status: studentStatusValidator },
   returns: v.id("students"),
   handler: async (ctx, args) => {
-    const now = Date.now();
     const studentId = await ctx.db.insert("students", {
       userId: args.userId,
       status: args.status,
-      updatedAt: now,
+      updatedAt: Date.now(),
     });
-    for (const stroke of STROKES) {
-      await ctx.db.insert("strokeSkills", {
-        studentId,
-        stroke: stroke.key,
-        progress: 0,
-        updatedAt: now,
-      });
-    }
     return studentId;
   },
 });

@@ -28,6 +28,7 @@ import {
   EditStudentDialog,
   ResetPasswordDialog,
 } from "@/components/coach/edit-student-dialog";
+import { ExportAttendanceDialog } from "@/components/coach/export-attendance-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -193,9 +194,14 @@ export default function CoachStudentDetailPage() {
               <AttendanceSummary stats={attendance.stats} />
               <Card>
                 <CardContent>
-                  <h3 className="mb-3 text-sm font-semibold">
-                    Attendance History
-                  </h3>
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold">
+                      Attendance History
+                    </h3>
+                    <ExportAttendanceDialog
+                      preselectedStudentId={student.studentId}
+                    />
+                  </div>
                   <ul className="divide-y">
                     {attendance.records.slice(0, 30).map((record) => (
                       <li

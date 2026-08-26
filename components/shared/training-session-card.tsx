@@ -1,3 +1,5 @@
+"use client";
+
 import { CalendarDays, Clock, Waves } from "lucide-react";
 import {
   Card,
@@ -7,7 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, strokeLabel } from "@/lib/format";
+import { formatDate } from "@/lib/format";
+import { useSkillCatalog } from "@/lib/use-skill-catalog";
 
 export type SessionRecord = {
   _id: string;
@@ -25,6 +28,7 @@ export function TrainingSessionCard({
   session: SessionRecord;
   footer?: React.ReactNode;
 }) {
+  const { label } = useSkillCatalog();
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -49,11 +53,11 @@ export function TrainingSessionCard({
           </span>
         </div>
         {session.strokes.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5" aria-label="Strokes">
+          <div className="flex flex-wrap gap-1.5" aria-label="Skills">
             {session.strokes.map((stroke) => (
               <Badge key={stroke} variant="secondary" className="gap-1">
                 <Waves className="size-3" aria-hidden="true" />
-                {strokeLabel(stroke)}
+                {label(stroke)}
               </Badge>
             ))}
           </div>

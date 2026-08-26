@@ -16,11 +16,13 @@ import { ProgressRow } from "@/components/shared/progress-row";
 import { GoalCard } from "@/components/shared/goal-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDate, strokeLabel } from "@/lib/format";
+import { formatDate } from "@/lib/format";
+import { useSkillCatalog } from "@/lib/use-skill-catalog";
 
 export default function StudentDashboardPage() {
   const data = useQuery(api.dashboard.studentDashboard, {});
   const me = useQuery(api.users.currentUser, {});
+  const { label } = useSkillCatalog();
 
   const firstName = (me?.name ?? "").split(/\s+/)[0] ?? "";
 
@@ -69,28 +71,28 @@ export default function StudentDashboardPage() {
               hint={
                 data.overallProgress === null
                   ? "No progress recorded yet"
-                  : "Average across your strokes"
+                  : "Average across your skills"
               }
             />
           </div>
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Stroke Skills</CardTitle>
+              <CardTitle className="text-base">Skills</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {data.skills.length === 0 ? (
                 <EmptyState
                   icon={Gauge}
                   title="No skills recorded yet"
-                  description="Your coach will record your stroke progress here."
+                  description="Your coach will record your skill progress here."
                   className="border-0 py-4"
                 />
               ) : (
                 data.skills.map((skill) => (
                   <ProgressRow
-                    key={skill.stroke}
-                    label={strokeLabel(skill.stroke)}
+                    key={skill.key}
+                    label={skill.name}
                     value={skill.progress}
                   />
                 ))
@@ -132,7 +134,7 @@ export default function StudentDashboardPage() {
                       <p className="mt-1 text-sm text-muted-foreground">
                         {session.durationMinutes} minutes
                         {session.strokes.length > 0
-                          ? ` · ${session.strokes.map(strokeLabel).join(", ")}`
+                          ? ` · ${session.strokes.map(label).join(", ")}`
                           : ""}
                       </p>
                     </div>

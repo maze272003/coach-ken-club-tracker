@@ -10,10 +10,12 @@ import { SessionFormDialog } from "@/components/coach/session-form-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDate, strokeLabel } from "@/lib/format";
+import { formatDate } from "@/lib/format";
+import { useSkillCatalog } from "@/lib/use-skill-catalog";
 
 export default function CoachTrainingPage() {
   const sessions = useQuery(api.training.listRecent, { limit: 50 });
+  const { label } = useSkillCatalog();
 
   return (
     <div className="space-y-6">
@@ -75,7 +77,7 @@ export default function CoachTrainingPage() {
                             className="gap-1"
                           >
                             <Waves className="size-3" aria-hidden="true" />
-                            {strokeLabel(stroke)}
+                            {label(stroke)}
                           </Badge>
                         ))}
                       </div>

@@ -235,3 +235,187 @@ export const rollCall = query({
     return rows.filter((r) => r !== null).sort((a, b) => a.name.localeCompare(b.name));
   },
 });
+
+/**
+ * Export attendance records: customizable by student (all students or a
+ * specific student), date range (startDate/endDate), and status.
+ * Returns enriched records with student name and email, along with derived stats.
+ */
+export const exportAttendance = query({
+  args: {
+    studentId: v.optional(v.id("students")),
+    startDate: v.optional(v.string()),
+    endDate: v.optional(v.string()),
+    status: v.optional(attendanceStatusValidator),
+  },
+  returns: v.object({
+    stats: v.object({
+      total: v.number(),
+      attended: v.number(),
+      present: v.number(),
+      late: v.number(),
+      absent: v.number(),
+      percentage: v.union(v.number(), v.null()),
+    }),
+    records: v.array(
+      v.object({
+        _id: v.id("attendance"),
+        studentId: v.id("students"),
+        studentName: v.string(),
+        studentEmail: v.string(),
+        date: v.string(),
+        status: attendanceStatusValidator,
+        updatedAt: v.number(),
+      }),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    const coach = await requireCoach(ctx);
+    const student = coach ? null : await requireStudent(ctx);
+    if (!coach && !student) throw new ConvexError(NOT_AUTHORIZED);
+
+    // If caller is student, force scope to their own studentId
+    const targetStudentId = coach ? args.studentId : student?.student._id;
+
+    if (args.startDate !== undefined) assertDateString(args.startDate);
+    if (args.endDate !== undefined) assertDateString(args.endDate);
+    if (
+      args.startDate !== undefined &&
+      args.endDate !== undefined &&
+      args.startDate > args.endDate
+    ) {
+      throw new ConvexError("startDate must be before or equal to endDate");
+    }
+
+    let records;
+    if (targetStudentId !== undefined) {
+      if (args.startDate !== undefined && args.endDate !== undefined) {
+        records = await ctx.db
+          .query("attendance")
+          .withIndex("by_student_and_date", (q) =>
+            q
+              .eq("studentId", targetStudentId)
+              .gte("date", args.startDate!)
+              .lte("date", args.endDate!),
+          )
+          .order("desc")
+          .take(5000);
+      } else if (args.startDate !== undefined) {
+        records = await ctx.db
+          .query("attendance")
+          .withIndex("by_student_and_date", (q) =>
+            q.eq("studentId", targetStudentId).gte("date", args.startDate!),
+          )
+          .order("desc")
+          .take(5000);
+      } else if (args.endDate !== undefined) {
+        records = await ctx.db
+          .query("attendance")
+          .withIndex("by_student_and_date", (q) =>
+            q.eq("studentId", targetStudentId).lte("date", args.endDate!),
+          )
+          .order("desc")
+          .take(5000);
+      } else {
+        records = await ctx.db
+          .query("attendance")
+          .withIndex("by_student_and_date", (q) =>
+            q.eq("studentId", targetStudentId),
+          )
+          .order("desc")
+          .take(5000);
+      }
+    } else {
+      // All students (coach only)
+      if (args.startDate !== undefined && args.endDate !== undefined) {
+        records = await ctx.db
+          .query("attendance")
+          .withIndex("by_date", (q) =>
+            q.gte("date", args.startDate!).lte("date", args.endDate!),
+          )
+          .order("desc")
+          .take(5000);
+      } else if (args.startDate !== undefined) {
+        records = await ctx.db
+          .query("attendance")
+          .withIndex("by_date", (q) => q.gte("date", args.startDate!))
+          .order("desc")
+          .take(5000);
+      } else if (args.endDate !== undefined) {
+        records = await ctx.db
+          .query("attendance")
+          .withIndex("by_date", (q) => q.lte("date", args.endDate!))
+          .order("desc")
+          .take(5000);
+      } else {
+        records = await ctx.db
+          .query("attendance")
+          .withIndex("by_date")
+          .order("desc")
+          .take(5000);
+      }
+    }
+
+    if (args.status !== undefined) {
+      records = records.filter((r) => r.status === args.status);
+    }
+
+    // Hydrate student and user info
+    const uniqueStudentIds = Array.from(
+      new Set(records.map((r) => r.studentId)),
+    );
+    const studentMap = new Map<string, { name: string; email: string }>();
+
+    await Promise.all(
+      uniqueStudentIds.map(async (sId) => {
+        const studentDoc = await ctx.db.get("students", sId);
+        if (!studentDoc) return;
+        const userDoc = await ctx.db.get("users", studentDoc.userId);
+        studentMap.set(sId, {
+          name: userDoc?.name ?? "Unknown Student",
+          email: userDoc?.email ?? "",
+        });
+      }),
+    );
+
+    const formattedRecords = records
+      .map((r) => {
+        const studentInfo = studentMap.get(r.studentId);
+        return {
+          _id: r._id,
+          studentId: r.studentId,
+          studentName: studentInfo?.name ?? "Unknown Student",
+          studentEmail: studentInfo?.email ?? "",
+          date: r.date,
+          status: r.status,
+          updatedAt: r.updatedAt,
+        };
+      })
+      .sort((a, b) => {
+        const dateCmp = b.date.localeCompare(a.date);
+        if (dateCmp !== 0) return dateCmp;
+        return a.studentName.localeCompare(b.studentName);
+      });
+
+    const total = formattedRecords.length;
+    const present = formattedRecords.filter((r) => r.status === "present").length;
+    const late = formattedRecords.filter((r) => r.status === "late").length;
+    const absent = formattedRecords.filter((r) => r.status === "absent").length;
+    const attended = present + late;
+    const percentage =
+      total === 0 ? null : Math.round((attended / total) * 100);
+
+    return {
+      stats: {
+        total,
+        attended,
+        present,
+        late,
+        absent,
+        percentage,
+      },
+      records: formattedRecords,
+    };
+  },
+});
+
