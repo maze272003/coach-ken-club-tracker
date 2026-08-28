@@ -18,6 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatTimeMs } from "@/lib/format";
+
 
 export default function CoachGoalsPage() {
   const students = useQuery(api.students.list, {});
@@ -110,6 +112,13 @@ export default function CoachGoalsPage() {
                         studentId,
                         title: goal.title,
                         description: goal.description ?? "",
+                        type: goal.type ?? "manual",
+                        stroke: goal.stroke ?? undefined,
+                        distanceMeters: goal.distanceMeters ?? undefined,
+                        course: goal.course ?? undefined,
+                        targetTimeInput: goal.targetTimeMs ? formatTimeMs(goal.targetTimeMs) : "",
+                        baselineBestInput: goal.baselineBestMs ? formatTimeMs(goal.baselineBestMs) : "",
+                        targetAttendancePct: goal.targetAttendancePct ?? 90,
                         target: goal.target ?? "",
                         progress: String(goal.progress),
                         status: goal.status,
@@ -117,6 +126,7 @@ export default function CoachGoalsPage() {
                       }}
                       triggerLabel="Edit"
                     />
+
                   }
                 />
               ))}

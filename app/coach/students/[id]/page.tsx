@@ -35,7 +35,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ageYears, formatDate } from "@/lib/format";
+import { ageYears, formatDate, formatTimeMs } from "@/lib/format";
+
 
 export default function CoachStudentDetailPage() {
   const params = useParams<{ id: string }>();
@@ -369,6 +370,13 @@ export default function CoachStudentDetailPage() {
                         studentId: student.studentId,
                         title: goal.title,
                         description: goal.description ?? "",
+                        type: goal.type ?? "manual",
+                        stroke: goal.stroke ?? undefined,
+                        distanceMeters: goal.distanceMeters ?? undefined,
+                        course: goal.course ?? undefined,
+                        targetTimeInput: goal.targetTimeMs ? formatTimeMs(goal.targetTimeMs) : "",
+                        baselineBestInput: goal.baselineBestMs ? formatTimeMs(goal.baselineBestMs) : "",
+                        targetAttendancePct: goal.targetAttendancePct ?? 90,
                         target: goal.target ?? "",
                         progress: String(goal.progress),
                         status: goal.status,
@@ -376,6 +384,7 @@ export default function CoachStudentDetailPage() {
                       }}
                       triggerLabel="Edit"
                     />
+
                   }
                 />
               ))}
