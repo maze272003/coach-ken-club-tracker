@@ -60,7 +60,8 @@ const personalBestItem = v.object({
   event: v.string(),
 });
 
-function formatEventName(
+export function formatEventName(
+
   distanceMeters: number,
   stroke: string,
   course: "short" | "long",

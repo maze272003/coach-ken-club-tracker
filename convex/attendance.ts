@@ -5,6 +5,9 @@ import { requireCoach, requireStudent, resolveStudentAccess } from "./lib/access
 import { attendanceStats } from "./lib/stats";
 import { assertDateString, assertMonthString } from "./lib/validation";
 import { checkAndAutoCompleteGoals } from "./goals";
+import { formatTimeMs } from "../lib/format";
+import { formatEventName } from "./times";
+
 
 
 const NOT_AUTHORIZED = "Not authorized";
@@ -312,11 +315,12 @@ export const rollCall = query({
 });
 
 /**
- * Export attendance records: customizable by student (all students or a
- * specific student), date range (startDate/endDate), and status.
- * Returns enriched records with student name and email, along with derived stats.
+ * Filterable attendance query for CSV export and data compaction.
+ * Compacts daily training sessions, strokes practiced, split times, and
+ * personal best achievements into each attendance date record.
  */
 export const exportAttendance = query({
+
   args: {
     studentId: v.optional(v.id("students")),
     startDate: v.optional(v.string()),
@@ -331,6 +335,10 @@ export const exportAttendance = query({
       late: v.number(),
       absent: v.number(),
       percentage: v.union(v.number(), v.null()),
+      totalTrainingMinutes: v.number(),
+      totalDistanceMeters: v.number(),
+      totalTimesRecorded: v.number(),
+      totalPBsAchieved: v.number(),
     }),
     records: v.array(
       v.object({
@@ -338,8 +346,21 @@ export const exportAttendance = query({
         studentId: v.id("students"),
         studentName: v.string(),
         studentEmail: v.string(),
+        groupName: v.union(v.string(), v.null()),
         date: v.string(),
         status: attendanceStatusValidator,
+        // Connected daily training data
+        sessionsCount: v.number(),
+        trainingSummary: v.string(),
+        totalTrainingMinutes: v.number(),
+        totalDistanceMeters: v.number(),
+        strokesPracticed: v.array(v.string()),
+        sessionNotes: v.union(v.string(), v.null()),
+        // Connected daily time trial and PB data
+        timesCount: v.number(),
+        timesSummary: v.string(),
+        personalBestsAchieved: v.array(v.string()),
+        timeNotes: v.union(v.string(), v.null()),
         updatedAt: v.number(),
       }),
     ),
@@ -435,34 +456,228 @@ export const exportAttendance = query({
       records = records.filter((r) => r.status === args.status);
     }
 
-    // Hydrate student and user info
+    // Hydrate student, user, group, training sessions, and time trial results
     const uniqueStudentIds = Array.from(
       new Set(records.map((r) => r.studentId)),
     );
-    const studentMap = new Map<string, { name: string; email: string }>();
+
+    const studentMetaMap = new Map<
+      string,
+      {
+        name: string;
+        email: string;
+        groupName: string | null;
+        sessionsByDate: Map<
+          string,
+          {
+            title: string;
+            durationMinutes: number;
+            distanceMeters: number | null;
+            strokes: string[];
+            notes: string | null;
+          }[]
+        >;
+        timesByDate: Map<
+          string,
+          {
+            distanceMeters: number;
+            stroke: string;
+            course: "short" | "long";
+            timeMs: number;
+            context: string;
+            notes: string | null;
+          }[]
+        >;
+        bestByEvent: Map<string, number>;
+      }
+    >();
 
     await Promise.all(
       uniqueStudentIds.map(async (sId) => {
         const studentDoc = await ctx.db.get("students", sId);
         if (!studentDoc) return;
         const userDoc = await ctx.db.get("users", studentDoc.userId);
-        studentMap.set(sId, {
+        let groupName: string | null = null;
+        if (studentDoc.groupId) {
+          const groupDoc = await ctx.db.get("groups", studentDoc.groupId);
+          groupName = groupDoc?.name ?? null;
+        }
+
+        // Fetch all training sessions for this student
+        const studentSessions = await ctx.db
+          .query("trainingSessions")
+          .withIndex("by_student_and_date", (q) => q.eq("studentId", sId))
+          .take(2000);
+
+        const sessionsByDate = new Map<
+          string,
+          {
+            title: string;
+            durationMinutes: number;
+            distanceMeters: number | null;
+            strokes: string[];
+            notes: string | null;
+          }[]
+        >();
+        for (const s of studentSessions) {
+          const list = sessionsByDate.get(s.date) ?? [];
+          list.push({
+            title: s.title,
+            durationMinutes: s.durationMinutes,
+            distanceMeters: s.distanceMeters ?? null,
+            strokes: s.strokes,
+            notes: s.notes ?? null,
+          });
+          sessionsByDate.set(s.date, list);
+        }
+
+        // Fetch all time results for this student
+        const studentTimes = await ctx.db
+          .query("timeResults")
+          .withIndex("by_student_and_date", (q) => q.eq("studentId", sId))
+          .take(2000);
+
+        const bestByEvent = new Map<string, number>();
+        const timesByDate = new Map<
+          string,
+          {
+            distanceMeters: number;
+            stroke: string;
+            course: "short" | "long";
+            timeMs: number;
+            context: string;
+            notes: string | null;
+          }[]
+        >();
+
+        for (const t of studentTimes) {
+          const eventKey = `${t.stroke}-${t.distanceMeters}-${t.course}`;
+          const currentBest = bestByEvent.get(eventKey);
+          if (currentBest === undefined || t.timeMs < currentBest) {
+            bestByEvent.set(eventKey, t.timeMs);
+          }
+
+          const list = timesByDate.get(t.date) ?? [];
+          list.push({
+            distanceMeters: t.distanceMeters,
+            stroke: t.stroke,
+            course: t.course,
+            timeMs: t.timeMs,
+            context: t.context,
+            notes: t.notes ?? null,
+          });
+          timesByDate.set(t.date, list);
+        }
+
+        studentMetaMap.set(sId, {
           name: userDoc?.name ?? "Unknown Student",
           email: userDoc?.email ?? "",
+          groupName,
+          sessionsByDate,
+          timesByDate,
+          bestByEvent,
         });
       }),
     );
 
+    let totalTrainingMinutes = 0;
+    let totalDistanceMeters = 0;
+    let totalTimesRecorded = 0;
+    let totalPBsAchieved = 0;
+
     const formattedRecords = records
       .map((r) => {
-        const studentInfo = studentMap.get(r.studentId);
+        const studentMeta = studentMetaMap.get(r.studentId);
+        const dailySessions = studentMeta?.sessionsByDate.get(r.date) ?? [];
+        const dailyTimes = studentMeta?.timesByDate.get(r.date) ?? [];
+        const bestByEvent = studentMeta?.bestByEvent ?? new Map<string, number>();
+
+        // Training calculations
+        const sessionsCount = dailySessions.length;
+        const dailyDuration = dailySessions.reduce(
+          (sum, s) => sum + s.durationMinutes,
+          0,
+        );
+        const dailyDistance = dailySessions.reduce(
+          (sum, s) => sum + (s.distanceMeters ?? 0),
+          0,
+        );
+        totalTrainingMinutes += dailyDuration;
+        totalDistanceMeters += dailyDistance;
+
+        const strokesPracticed = Array.from(
+          new Set(dailySessions.flatMap((s) => s.strokes)),
+        );
+
+        const trainingSummary =
+          dailySessions.length === 0
+            ? "No session recorded"
+            : dailySessions
+                .map((s) => {
+                  const distStr = s.distanceMeters ? `, ${s.distanceMeters}m` : "";
+                  const strokeStr =
+                    s.strokes.length > 0 ? ` — ${s.strokes.join(", ")}` : "";
+                  return `${s.title} (${s.durationMinutes} mins${distStr}${strokeStr})`;
+                })
+                .join("; ");
+
+        const sessionNotes =
+          dailySessions
+            .map((s) => s.notes)
+            .filter((n): n is string => Boolean(n))
+            .join("; ") || null;
+
+        // Time trial and PB calculations
+        const timesCount = dailyTimes.length;
+        totalTimesRecorded += timesCount;
+
+        const personalBestsAchieved: string[] = [];
+        const timesSummaryList: string[] = [];
+
+        for (const t of dailyTimes) {
+          const eventKey = `${t.stroke}-${t.distanceMeters}-${t.course}`;
+          const isPb = bestByEvent.get(eventKey) === t.timeMs;
+          const eventName = formatEventName(t.distanceMeters, t.stroke, t.course);
+          const timeStr = formatTimeMs(t.timeMs);
+
+          if (isPb) {
+            personalBestsAchieved.push(`${eventName}: ${timeStr}`);
+            totalPBsAchieved += 1;
+          }
+
+          const pbTag = isPb ? " (PB)" : "";
+          const ctxTag = ` [${t.context.replace("_", " ")}]`;
+          const noteTag = t.notes ? ` (${t.notes})` : "";
+          timesSummaryList.push(`${eventName}: ${timeStr}${pbTag}${ctxTag}${noteTag}`);
+        }
+
+        const timesSummary =
+          timesSummaryList.length === 0 ? "—" : timesSummaryList.join("; ");
+
+        const timeNotes =
+          dailyTimes
+            .map((t) => t.notes)
+            .filter((n): n is string => Boolean(n))
+            .join("; ") || null;
+
         return {
           _id: r._id,
           studentId: r.studentId,
-          studentName: studentInfo?.name ?? "Unknown Student",
-          studentEmail: studentInfo?.email ?? "",
+          studentName: studentMeta?.name ?? "Unknown Student",
+          studentEmail: studentMeta?.email ?? "",
+          groupName: studentMeta?.groupName ?? null,
           date: r.date,
           status: r.status,
+          sessionsCount,
+          trainingSummary,
+          totalTrainingMinutes: dailyDuration,
+          totalDistanceMeters: dailyDistance,
+          strokesPracticed,
+          sessionNotes,
+          timesCount,
+          timesSummary,
+          personalBestsAchieved,
+          timeNotes,
           updatedAt: r.updatedAt,
         };
       })
@@ -488,9 +703,14 @@ export const exportAttendance = query({
         late,
         absent,
         percentage,
+        totalTrainingMinutes,
+        totalDistanceMeters,
+        totalTimesRecorded,
+        totalPBsAchieved,
       },
       records: formattedRecords,
     };
   },
 });
+
 

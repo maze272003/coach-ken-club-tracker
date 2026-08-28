@@ -132,18 +132,37 @@ export function ExportAttendanceDialog({
     const headers = [
       "Student Name",
       "Student Email",
+      "Group",
       "Attendance Date",
       "Status",
+      "Training Sessions",
+      "Training Duration (Mins)",
+      "Training Distance (Meters)",
+      "Strokes Practiced",
+      "Training Notes",
+      "Recorded Swim Times & Splits",
+      "Personal Bests Set Today",
+      "Time Notes",
       "Last Updated (UTC)",
     ];
 
     const rows = exportData.records.map((record) => [
       escapeCsvCell(record.studentName),
       escapeCsvCell(record.studentEmail),
+      escapeCsvCell(record.groupName ?? "Unassigned"),
       escapeCsvCell(record.date),
       escapeCsvCell(record.status.toUpperCase()),
+      escapeCsvCell(record.trainingSummary),
+      escapeCsvCell(record.totalTrainingMinutes),
+      escapeCsvCell(record.totalDistanceMeters || ""),
+      escapeCsvCell(record.strokesPracticed.join(", ")),
+      escapeCsvCell(record.sessionNotes ?? ""),
+      escapeCsvCell(record.timesSummary),
+      escapeCsvCell(record.personalBestsAchieved.join("; ")),
+      escapeCsvCell(record.timeNotes ?? ""),
       escapeCsvCell(new Date(record.updatedAt).toISOString()),
     ]);
+
 
     const csvContent =
       "\uFEFF" +
@@ -409,7 +428,23 @@ export function ExportAttendanceDialog({
                     Attendance Rate: {exportData.stats.percentage}%
                   </Badge>
                 )}
+                {exportData.stats.totalTrainingMinutes > 0 && (
+                  <Badge variant="outline" className="bg-background text-primary border-primary/30">
+                    Training: {exportData.stats.totalTrainingMinutes} mins{exportData.stats.totalDistanceMeters > 0 ? ` (${exportData.stats.totalDistanceMeters}m)` : ""}
+                  </Badge>
+                )}
+                {exportData.stats.totalTimesRecorded > 0 && (
+                  <Badge variant="outline" className="bg-background text-indigo-700 border-indigo-300 dark:text-indigo-400">
+                    Times Recorded: {exportData.stats.totalTimesRecorded}
+                  </Badge>
+                )}
+                {exportData.stats.totalPBsAchieved > 0 && (
+                  <Badge variant="outline" className="bg-background text-amber-700 border-amber-300 dark:text-amber-400">
+                    PBs Set: {exportData.stats.totalPBsAchieved}
+                  </Badge>
+                )}
               </div>
+
             ) : (
               <p className="text-xs text-muted-foreground italic">
                 No attendance entries match the selected filters.
