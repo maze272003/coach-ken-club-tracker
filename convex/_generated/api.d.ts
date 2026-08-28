@@ -12,6 +12,7 @@ import type * as attendance from "../attendance.js";
 import type * as auth from "../auth.js";
 import type * as dashboard from "../dashboard.js";
 import type * as goals from "../goals.js";
+import type * as groups from "../groups.js";
 import type * as http from "../http.js";
 import type * as lib_access from "../lib/access.js";
 import type * as lib_stats from "../lib/stats.js";
@@ -19,6 +20,7 @@ import type * as lib_validation from "../lib/validation.js";
 import type * as seed from "../seed.js";
 import type * as skills from "../skills.js";
 import type * as students from "../students.js";
+import type * as tests_helpers from "../tests/helpers.js";
 import type * as training from "../training.js";
 import type * as users from "../users.js";
 
@@ -33,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   dashboard: typeof dashboard;
   goals: typeof goals;
+  groups: typeof groups;
   http: typeof http;
   "lib/access": typeof lib_access;
   "lib/stats": typeof lib_stats;
@@ -40,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   skills: typeof skills;
   students: typeof students;
+  "tests/helpers": typeof tests_helpers;
   training: typeof training;
   users: typeof users;
 }>;
