@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { createAccount } from "@convex-dev/auth/server";
 import { ConvexError } from "convex/values";
-import { action, internalMutation, internalQuery } from "./_generated/server";
+import { action, internalMutation, internalQuery, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
@@ -17,6 +17,8 @@ const JOINED_AT_DAYS_AGO = 90;
 type DemoSession = {
   title: string;
   durationMinutes: number;
+  distanceMeters?: number;
+  intensity?: "easy" | "moderate" | "hard";
   skills: string[];
   notes: string;
 };
@@ -64,6 +66,10 @@ type DemoStudent = {
   group: "Competitive" | "Development";
   dateOfBirth: string;
   sex: "M" | "F";
+  parentName?: string;
+  parentPhone?: string;
+  parentEmail?: string;
+  medicalNotes?: string;
   /**
    * Starting skill level (coach's baseline assessment). Final progress
    * is derived: starting level + 5 points per session that practiced
@@ -82,6 +88,10 @@ const DEMO_STUDENTS: DemoStudent[] = [
     group: "Competitive",
     dateOfBirth: "2011-05-14",
     sex: "M",
+    parentName: "Carlos Santos",
+    parentPhone: "+1 555-0142",
+    parentEmail: "carlos.santos@demo.swim",
+    medicalNotes: "Mild asthma — keeps inhaler at poolside. No other restrictions.",
     startingSkills: {
       freestyle: 60,
       backstroke: 55,
@@ -99,6 +109,8 @@ const DEMO_STUDENTS: DemoStudent[] = [
         session: {
           title: "IM Prep",
           durationMinutes: 90,
+          distanceMeters: 3000,
+          intensity: "hard",
           skills: ["freestyle", "backstroke", "breaststroke", "butterfly"],
           notes: "Transition work between strokes.",
         },
@@ -111,6 +123,8 @@ const DEMO_STUDENTS: DemoStudent[] = [
         session: {
           title: "Endurance Set",
           durationMinutes: 75,
+          distanceMeters: 2800,
+          intensity: "moderate",
           skills: ["freestyle", "breaststroke"],
           notes: "4x200m negative split.",
         },
@@ -122,6 +136,8 @@ const DEMO_STUDENTS: DemoStudent[] = [
         session: {
           title: "Freestyle Technique",
           durationMinutes: 60,
+          distanceMeters: 1800,
+          intensity: "easy",
           skills: ["freestyle"],
           notes: "Focus on stroke length and catch.",
         },
@@ -133,6 +149,8 @@ const DEMO_STUDENTS: DemoStudent[] = [
         session: {
           title: "Freestyle & Backstroke",
           durationMinutes: 90,
+          distanceMeters: 3200,
+          intensity: "moderate",
           skills: ["freestyle", "backstroke"],
           notes: "Improve breathing and body position.",
         },
@@ -183,6 +201,15 @@ const DEMO_STUDENTS: DemoStudent[] = [
         context: "meet",
         notes: "District Championship Finals - 2.4s drop!",
       },
+      {
+        daysAgo: 1,
+        stroke: "im",
+        distanceMeters: 200,
+        course: "short",
+        timeMs: 149800,
+        context: "meet",
+        notes: "First competitive 200 IM.",
+      },
     ],
     goals: [
       {
@@ -199,6 +226,20 @@ const DEMO_STUDENTS: DemoStudent[] = [
         targetDateDaysAhead: 45,
         updatedDaysAgo: 1,
       },
+      {
+        title: "Sub-2:20 200m IM",
+        description: "Build butterfly endurance to hold the IM pace through the final 50.",
+        type: "time",
+        stroke: "im",
+        distanceMeters: 200,
+        course: "short",
+        targetTimeMs: 140000,
+        baselineBestMs: 149800,
+        progress: 0,
+        status: "not_started",
+        targetDateDaysAhead: 90,
+        updatedDaysAgo: 1,
+      },
     ],
   },
   {
@@ -207,6 +248,10 @@ const DEMO_STUDENTS: DemoStudent[] = [
     group: "Competitive",
     dateOfBirth: "2010-11-02",
     sex: "F",
+    parentName: "Elena Reyes",
+    parentPhone: "+1 555-0177",
+    parentEmail: "elena.reyes@demo.swim",
+    medicalNotes: "No known medical conditions.",
     startingSkills: {
       freestyle: 60,
       backstroke: 60,
@@ -226,6 +271,8 @@ const DEMO_STUDENTS: DemoStudent[] = [
         session: {
           title: "Kick & Pull Set",
           durationMinutes: 60,
+          distanceMeters: 2000,
+          intensity: "moderate",
           skills: ["backstroke", "freestyle"],
           notes: "Kick board and pull buoy alternating sets.",
         },
@@ -237,6 +284,8 @@ const DEMO_STUDENTS: DemoStudent[] = [
         session: {
           title: "IM Prep",
           durationMinutes: 90,
+          distanceMeters: 3000,
+          intensity: "hard",
           skills: ["butterfly", "backstroke", "breaststroke", "freestyle"],
           notes: "Transition work between strokes.",
         },
@@ -248,6 +297,8 @@ const DEMO_STUDENTS: DemoStudent[] = [
         session: {
           title: "Backstroke Focus",
           durationMinutes: 60,
+          distanceMeters: 2200,
+          intensity: "easy",
           skills: ["backstroke"],
           notes: "Hip rotation and streamline off the wall.",
         },
@@ -323,6 +374,16 @@ const DEMO_STUDENTS: DemoStudent[] = [
         targetDateDaysAhead: -10,
         updatedDaysAgo: 9,
       },
+      {
+        title: "Learn Butterfly Turns",
+        description: "Older goal from last season, replaced by the fly speed goal.",
+        type: "manual",
+        target: "Legal open-turn and flip-turn transitions",
+        progress: 40,
+        status: "archived",
+        targetDateDaysAhead: -30,
+        updatedDaysAgo: 30,
+      },
     ],
   },
   {
@@ -331,6 +392,10 @@ const DEMO_STUDENTS: DemoStudent[] = [
     group: "Development",
     dateOfBirth: "2013-03-27",
     sex: "M",
+    parentName: "Sofia Cruz",
+    parentPhone: "+1 555-0193",
+    parentEmail: "sofia.cruz@demo.swim",
+    medicalNotes: "Nut allergy (EpiPen in first-aid kit). Ear tubes — avoid deep diving drills.",
     startingSkills: {
       freestyle: 50,
       backstroke: 40,
@@ -349,6 +414,8 @@ const DEMO_STUDENTS: DemoStudent[] = [
         session: {
           title: "Water Comfort & Kicks",
           durationMinutes: 45,
+          distanceMeters: 800,
+          intensity: "easy",
           skills: ["freestyle", "breaststroke"],
           notes: "Kickboard drills and breathing rhythm.",
         },
@@ -362,6 +429,8 @@ const DEMO_STUDENTS: DemoStudent[] = [
         session: {
           title: "Breaststroke Fundamentals",
           durationMinutes: 45,
+          distanceMeters: 900,
+          intensity: "easy",
           skills: ["breaststroke"],
           notes: "Timing of the pull-kick cycle.",
         },
@@ -409,6 +478,120 @@ const DEMO_STUDENTS: DemoStudent[] = [
       },
     ],
   },
+  {
+    name: "Lily Wu",
+    email: "lily.wu@demo.swim",
+    group: "Development",
+    dateOfBirth: "2012-08-19",
+    sex: "F",
+    parentName: "Wei Wu",
+    parentPhone: "+1 555-0110",
+    parentEmail: "wei.wu@demo.swim",
+    startingSkills: {
+      freestyle: 55,
+      backstroke: 50,
+      breaststroke: 40,
+      butterfly: 25,
+    },
+    days: [
+      { daysAgo: 20, status: "present" },
+      { daysAgo: 18, status: "present" },
+      {
+        daysAgo: 16,
+        status: "present",
+        session: {
+          title: "Streamline & Push-offs",
+          durationMinutes: 45,
+          distanceMeters: 1000,
+          intensity: "easy",
+          skills: ["freestyle", "backstroke"],
+          notes: "Off-wall streamline hold, 5m breakout target.",
+        },
+      },
+      { daysAgo: 14, status: "present" },
+      { daysAgo: 12, status: "late" },
+      {
+        daysAgo: 11,
+        status: "present",
+        session: {
+          title: "Backstroke Basics",
+          durationMinutes: 45,
+          distanceMeters: 1100,
+          intensity: "moderate",
+          skills: ["backstroke"],
+          notes: "Straight-line backstroke with flags reference.",
+        },
+      },
+      { daysAgo: 9, status: "present" },
+      { daysAgo: 7, status: "absent" },
+      {
+        daysAgo: 6,
+        status: "present",
+        session: {
+          title: "Freestyle Breathing",
+          durationMinutes: 60,
+          distanceMeters: 1400,
+          intensity: "moderate",
+          skills: ["freestyle"],
+          notes: "Bilateral breathing every 3 strokes.",
+        },
+      },
+      { daysAgo: 4, status: "present" },
+      { daysAgo: 2, status: "present" },
+      {
+        daysAgo: 1,
+        status: "present",
+        session: {
+          title: "Intro to IM Order",
+          durationMinutes: 60,
+          distanceMeters: 1500,
+          intensity: "moderate",
+          skills: ["butterfly", "backstroke", "breaststroke", "freestyle"],
+          notes: "Swim the IM order in short 25m segments.",
+        },
+      },
+    ],
+    times: [
+      {
+        daysAgo: 11,
+        stroke: "backstroke",
+        distanceMeters: 50,
+        course: "short",
+        timeMs: 40900,
+        context: "practice",
+      },
+      {
+        daysAgo: 6,
+        stroke: "freestyle",
+        distanceMeters: 50,
+        course: "short",
+        timeMs: 34800,
+        context: "time_trial",
+        notes: "Much calmer breathing pattern.",
+      },
+      {
+        daysAgo: 1,
+        stroke: "im",
+        distanceMeters: 100,
+        course: "short",
+        timeMs: 84200,
+        context: "practice",
+        notes: "First full 100 IM in training.",
+      },
+    ],
+    goals: [
+      {
+        title: "Legal 100m IM",
+        description: "Swim a legal 100m IM in a mini-meet by end of season.",
+        type: "manual",
+        target: "All four strokes with legal turns and finishes",
+        progress: 25,
+        status: "in_progress",
+        targetDateDaysAhead: 45,
+        updatedDaysAgo: 1,
+      },
+    ],
+  },
 ];
 
 type DemoPractice = {
@@ -420,7 +603,7 @@ type DemoPractice = {
   plannedDistanceMeters: number;
   strokes: string[];
   notes: string;
-  status: "planned" | "completed";
+  status: "planned" | "completed" | "cancelled";
 };
 
 // Dates chosen so both Competitive swimmers were present on the
@@ -458,6 +641,17 @@ const DEMO_PRACTICES: DemoPractice[] = [
     strokes: ["freestyle"],
     notes: "8x50 all-out on 2:30.",
     status: "planned",
+  },
+  {
+    groupName: "Development",
+    daysOffset: -8,
+    title: "Breaststroke Kick Workshop",
+    startTime: "16:30",
+    plannedDurationMinutes: 45,
+    plannedDistanceMeters: 700,
+    strokes: ["breaststroke"],
+    notes: "Pool closure forced cancellation.",
+    status: "cancelled",
   },
   {
     groupName: "Development",
@@ -527,6 +721,10 @@ export const seed = action({
               : groupIds.competitiveId,
           dateOfBirth: demo.dateOfBirth,
           sex: demo.sex,
+          ...(demo.parentName ? { parentName: demo.parentName } : {}),
+          ...(demo.parentPhone ? { parentPhone: demo.parentPhone } : {}),
+          ...(demo.parentEmail ? { parentEmail: demo.parentEmail } : {}),
+          ...(demo.medicalNotes ? { medicalNotes: demo.medicalNotes } : {}),
           joinedAt: dateStringFromOffset(JOINED_AT_DAYS_AGO),
         },
       );
@@ -559,6 +757,12 @@ export const seed = action({
                   date: dateStringFromOffset(day.daysAgo),
                   title: day.session.title,
                   durationMinutes: day.session.durationMinutes,
+                  ...(day.session.distanceMeters !== undefined
+                    ? { distanceMeters: day.session.distanceMeters }
+                    : {}),
+                  ...(day.session.intensity !== undefined
+                    ? { intensity: day.session.intensity }
+                    : {}),
                   strokes: day.session.skills,
                   notes: day.session.notes,
                 },
@@ -621,7 +825,7 @@ export const upsertDemoGroups = internalMutation({
     developmentId: v.id("groups"),
   }),
   handler: async (ctx) => {
-    async function upsert(name: string): Promise<Id<"groups">> {
+    async function upsert(name: string, description: string): Promise<Id<"groups">> {
       const groups = await ctx.db
         .query("groups")
         .withIndex("by_status", (q) => q.eq("status", "active"))
@@ -632,13 +836,20 @@ export const upsertDemoGroups = internalMutation({
       if (existing) return existing._id;
       return ctx.db.insert("groups", {
         name,
+        description,
         status: "active",
         updatedAt: Date.now(),
       });
     }
     return {
-      competitiveId: await upsert("Competitive"),
-      developmentId: await upsert("Development"),
+      competitiveId: await upsert(
+        "Competitive",
+        "Race squad — technique refinement, sprint and endurance sets for meet swimmers.",
+      ),
+      developmentId: await upsert(
+        "Development",
+        "Fundamentals — water comfort, stroke basics, and building practice habits.",
+      ),
     };
   },
 });
@@ -655,7 +866,11 @@ export const addDemoPractices = internalMutation({
         plannedDistanceMeters: v.number(),
         strokes: v.array(v.string()),
         notes: v.string(),
-        status: v.union(v.literal("planned"), v.literal("completed")),
+        status: v.union(
+          v.literal("planned"),
+          v.literal("completed"),
+          v.literal("cancelled"),
+        ),
       }),
     ),
   },
@@ -707,6 +922,84 @@ export const findUserIdByEmail = internalQuery({
       .withIndex("email", (q) => q.eq("email", args.email))
       .unique();
     return user?._id ?? null;
+  },
+});
+
+/**
+ * Non-sensitive seed verification report for the CLI / data page:
+ * table counts + which demo accounts exist. Safe to expose — the demo
+ * emails are public knowledge in the repo and no personal data is
+ * returned. Run with: npx convex run seed:status
+ */
+export const status = query({
+  args: {},
+  returns: v.object({
+    counts: v.object({
+      groups: v.number(),
+      students: v.number(),
+      activeStudents: v.number(),
+      attendance: v.number(),
+      trainingSessions: v.number(),
+      timeResults: v.number(),
+      trainingGoals: v.number(),
+      strokeSkills: v.number(),
+      practices: v.number(),
+      practicesCompleted: v.number(),
+      practicesPlanned: v.number(),
+      practicesCancelled: v.number(),
+    }),
+    demoAccounts: v.array(
+      v.object({
+        email: v.string(),
+        exists: v.boolean(),
+      }),
+    ),
+  }),
+  handler: async (ctx) => {
+    const count = async (
+      table:
+        | "groups"
+        | "students"
+        | "attendance"
+        | "trainingSessions"
+        | "timeResults"
+        | "trainingGoals"
+        | "strokeSkills"
+        | "practices",
+    ) => (await ctx.db.query(table).take(1000)).length;
+
+    const students = await ctx.db.query("students").take(1000);
+    const practices = await ctx.db.query("practices").take(1000);
+
+    const demoEmails = DEMO_STUDENTS.map((demo) => demo.email);
+    const users = await ctx.db.query("users").withIndex("email").take(1000);
+    const existingEmails = new Set(
+      users.filter((u) => u.email !== undefined).map((u) => u.email!),
+    );
+
+    return {
+      counts: {
+        groups: await count("groups"),
+        students: students.length,
+        activeStudents: students.filter((s) => s.status === "active").length,
+        attendance: await count("attendance"),
+        trainingSessions: await count("trainingSessions"),
+        timeResults: await count("timeResults"),
+        trainingGoals: await count("trainingGoals"),
+        strokeSkills: await count("strokeSkills"),
+        practices: practices.length,
+        practicesCompleted: practices.filter((p) => p.status === "completed")
+          .length,
+        practicesPlanned: practices.filter((p) => p.status === "planned")
+          .length,
+        practicesCancelled: practices.filter((p) => p.status === "cancelled")
+          .length,
+      },
+      demoAccounts: demoEmails.map((email) => ({
+        email,
+        exists: existingEmails.has(email),
+      })),
+    };
   },
 });
 
@@ -883,6 +1176,14 @@ export const addStudentData = internalMutation({
         date: v.string(),
         title: v.string(),
         durationMinutes: v.number(),
+        distanceMeters: v.optional(v.number()),
+        intensity: v.optional(
+          v.union(
+            v.literal("easy"),
+            v.literal("moderate"),
+            v.literal("hard"),
+          ),
+        ),
         strokes: v.array(v.string()),
         notes: v.string(),
       }),
@@ -994,6 +1295,12 @@ export const addStudentData = internalMutation({
         date: session.date,
         title: session.title,
         durationMinutes: session.durationMinutes,
+        ...(session.distanceMeters !== undefined
+          ? { distanceMeters: session.distanceMeters }
+          : {}),
+        ...(session.intensity !== undefined
+          ? { intensity: session.intensity }
+          : {}),
         strokes: session.strokes,
         notes: session.notes,
         updatedAt: endOfDay(session.date),

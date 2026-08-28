@@ -14,6 +14,7 @@ const navItems: NavItem[] = [
   { href: "/coach/training", label: "Training", icon: "Dumbbell" },
   { href: "/coach/skills", label: "Skills", icon: "Gauge" },
   { href: "/coach/goals", label: "Goals", icon: "Target" },
+  { href: "/coach/data", label: "Data", icon: "Database" },
 
   { href: "/coach/profile", label: "Profile", icon: "User", exact: true },
 ];

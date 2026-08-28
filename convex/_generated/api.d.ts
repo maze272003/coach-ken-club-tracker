@@ -11,6 +11,7 @@
 import type * as attendance from "../attendance.js";
 import type * as auth from "../auth.js";
 import type * as dashboard from "../dashboard.js";
+import type * as dataOverview from "../dataOverview.js";
 import type * as goals from "../goals.js";
 import type * as groups from "../groups.js";
 import type * as http from "../http.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   attendance: typeof attendance;
   auth: typeof auth;
   dashboard: typeof dashboard;
+  dataOverview: typeof dataOverview;
   goals: typeof goals;
   groups: typeof groups;
   http: typeof http;

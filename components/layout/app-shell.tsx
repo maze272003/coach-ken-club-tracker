@@ -8,6 +8,7 @@ import {
   CalendarClock,
   CalendarDays,
   ClipboardCheck,
+  Database,
   Dumbbell,
   Gauge,
   LayoutDashboard,
@@ -39,6 +40,7 @@ export type NavIconName =
   | "ClipboardCheck"
   | "CalendarClock"
   | "CalendarDays"
+  | "Database"
   | "Dumbbell"
   | "Gauge"
   | "Target"
@@ -61,6 +63,7 @@ const iconMap: Record<NavIconName, LucideIcon> = {
   ClipboardCheck,
   CalendarClock,
   CalendarDays,
+  Database,
   Dumbbell,
   Gauge,
   Target,

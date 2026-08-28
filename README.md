@@ -48,12 +48,18 @@ variables (see the [Convex Auth setup docs](https://labs.convex.dev/auth/setup/m
 
 ### Demo data
 
-With an empty database, seed three demo swimmers with attendance,
-sessions, skills and goals:
+With an empty database, seed four demo swimmers with attendance,
+sessions (distance + intensity), skills, times (incl. IM), goals
+(all statuses), parent contact info, and medical notes:
 
 ```bash
-npx convex run seed:seed
+npx convex run seed:seed            # seed demo data
+npx convex run seed:resetDemo       # remove only the demo accounts/groups
+npx convex run seed:status          # table counts + demo account report
 ```
+
+The coach **Data** page (`/coach/data`) shows the same counts plus a
+per-swimmer data-coverage matrix for verifying seeds and migrations.
 
 Demo credentials (dev only):
 
@@ -63,6 +69,7 @@ Demo credentials (dev only):
 | Student | `alex.santos@demo.swim` | `swim-demo-2026` |
 | Student | `maria.reyes@demo.swim` | `swim-demo-2026` |
 | Student | `daniel.cruz@demo.swim` | `swim-demo-2026` |
+| Student | `lily.wu@demo.swim` | `swim-demo-2026` |
 
 ## Architecture
 
@@ -81,16 +88,19 @@ convex/
   goals.ts         training goals
   groups.ts        training groups with member counts
   practices.ts     group practice planning + one-click completion fan-out
-  dashboard.ts     coach overview + student dashboard aggregates
-  seed.ts          demo data
-  lib/             access control, validation, stats helpers
+  dashboard.ts    coach overview + student dashboard aggregates
+  times.ts        swim times (PBs, bulk time trials, CSV export)
+  dataOverview.ts coach-only per-student data coverage matrix
+  seed.ts         demo data + seed:status verification report
+  lib/            access control, validation, stats helpers
 
 app/
   login/                      sign-in page (no public registration)
   coach/                      dashboard, students, groups, practices,
-                              attendance, training, skills, goals, profile
+                              times, attendance, training, skills,
+                              goals, data (seed overview), profile
   student/                    dashboard, attendance, training, skills,
-                              goals, profile
+                              times, goals, profile
 ```
 
 ### Security model
