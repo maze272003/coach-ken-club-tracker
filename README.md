@@ -5,6 +5,12 @@ their swimmers.
 
 - The **coach** manages student accounts and records attendance, training
   sessions, stroke skill progress, and training goals.
+- Training **groups** organize the team; the coach schedules **group
+  practices** and completes them in one click — a training session is
+  logged automatically for every swimmer who attended.
+- Roll call is a **single bulk save** per group per day.
+- **Swimmer profiles** carry age, group, parent contact, and coach-only
+  medical notes.
 - **Students** sign in and see their own progress dashboard.
 
 Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, and
@@ -62,24 +68,27 @@ Demo credentials (dev only):
 
 ```
 convex/
-  schema.ts        users, students, attendance, trainingSessions,
-                   strokeSkills, trainingGoals (+ auth tables)
+  schema.ts        users, groups, skills, students, attendance, practices,
+                   trainingSessions, strokeSkills, trainingGoals
+                   (+ auth tables)
   auth.ts          single "password" provider:
                    - coach validates against COACH_EMAIL/COACH_PASSWORD env vars
                    - students validate against scrypt-hashed passwords
   students.ts      account/profile management (coach-only writes)
-  attendance.ts    roll call + per-student history/stats
-  training.ts      training sessions
+  attendance.ts    roll call (single + bulk) + per-student history/stats
+  training.ts      training sessions (duration, distance, intensity)
   skills.ts        stroke skill progress (record-based, extensible strokes)
   goals.ts         training goals
+  groups.ts        training groups with member counts
+  practices.ts     group practice planning + one-click completion fan-out
   dashboard.ts     coach overview + student dashboard aggregates
   seed.ts          demo data
   lib/             access control, validation, stats helpers
 
 app/
   login/                      sign-in page (no public registration)
-  coach/                      dashboard, students, attendance, training,
-                              skills, goals, profile
+  coach/                      dashboard, students, groups, practices,
+                              attendance, training, skills, goals, profile
   student/                    dashboard, attendance, training, skills,
                               goals, profile
 ```
@@ -99,7 +108,21 @@ app/
 
 - **Attendance**: `present` and `late` count as attended, `absent` does
   not. The percentage is always derived from the records.
+- **Practices**: completing a practice logs a training session for every
+  active group member who was not marked absent that day; re-completing
+  updates those sessions.
+- **Commitment**: attendance ÷ completed group practices since the
+  swimmer's join date, shown alongside the legacy all-records attendance
+  percentage.
 - **Overall training progress** is the average of the student's stroke
   skill progress; with no skill records the app shows
   "no progress recorded yet" instead of `0%`.
 - **Goals** that reach 100% progress are automatically marked completed.
+
+### Tests
+
+Convex function tests run with vitest + convex-test:
+
+```bash
+npm test
+```

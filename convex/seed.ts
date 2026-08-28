@@ -12,6 +12,7 @@ const DEMO_PASSWORD = "swim-demo-2026";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const PROGRESS_PER_SESSION = 5;
+const JOINED_AT_DAYS_AGO = 90;
 
 type DemoSession = {
   title: string;
@@ -43,6 +44,9 @@ type DemoGoal = {
 type DemoStudent = {
   name: string;
   email: string;
+  group: "Competitive" | "Development";
+  dateOfBirth: string;
+  sex: "M" | "F";
   /**
    * Starting skill level (coach's baseline assessment). Final progress
    * is derived: starting level + 5 points per session that practiced
@@ -57,6 +61,9 @@ const DEMO_STUDENTS: DemoStudent[] = [
   {
     name: "Alex Santos",
     email: "alex.santos@demo.swim",
+    group: "Competitive",
+    dateOfBirth: "2011-05-14",
+    sex: "M",
     startingSkills: {
       freestyle: 60,
       backstroke: 55,
@@ -128,6 +135,9 @@ const DEMO_STUDENTS: DemoStudent[] = [
   {
     name: "Maria Reyes",
     email: "maria.reyes@demo.swim",
+    group: "Competitive",
+    dateOfBirth: "2010-11-02",
+    sex: "F",
     startingSkills: {
       freestyle: 60,
       backstroke: 60,
@@ -199,6 +209,9 @@ const DEMO_STUDENTS: DemoStudent[] = [
   {
     name: "Daniel Cruz",
     email: "daniel.cruz@demo.swim",
+    group: "Development",
+    dateOfBirth: "2013-03-27",
+    sex: "M",
     startingSkills: {
       freestyle: 50,
       backstroke: 40,
@@ -251,6 +264,67 @@ const DEMO_STUDENTS: DemoStudent[] = [
   },
 ];
 
+type DemoPractice = {
+  groupName: string;
+  daysOffset: number; // negative = past
+  title: string;
+  startTime: string;
+  plannedDurationMinutes: number;
+  plannedDistanceMeters: number;
+  strokes: string[];
+  notes: string;
+  status: "planned" | "completed";
+};
+
+// Dates chosen so both Competitive swimmers were present on the
+// completed practice days (daysAgo 12 and 5 in their demo days).
+const DEMO_PRACTICES: DemoPractice[] = [
+  {
+    groupName: "Competitive",
+    daysOffset: -12,
+    title: "IM Prep",
+    startTime: "17:30",
+    plannedDurationMinutes: 90,
+    plannedDistanceMeters: 3000,
+    strokes: ["freestyle", "backstroke", "breaststroke", "butterfly"],
+    notes: "Transition work between strokes.",
+    status: "completed",
+  },
+  {
+    groupName: "Competitive",
+    daysOffset: -5,
+    title: "Endurance Set",
+    startTime: "18:00",
+    plannedDurationMinutes: 75,
+    plannedDistanceMeters: 2800,
+    strokes: ["freestyle", "breaststroke"],
+    notes: "4x200m negative split.",
+    status: "completed",
+  },
+  {
+    groupName: "Competitive",
+    daysOffset: 1,
+    title: "Sprint Fundamentals",
+    startTime: "17:30",
+    plannedDurationMinutes: 60,
+    plannedDistanceMeters: 2000,
+    strokes: ["freestyle"],
+    notes: "8x50 all-out on 2:30.",
+    status: "planned",
+  },
+  {
+    groupName: "Development",
+    daysOffset: 2,
+    title: "Water Comfort & Kicks",
+    startTime: "16:30",
+    plannedDurationMinutes: 45,
+    plannedDistanceMeters: 800,
+    strokes: ["freestyle", "breaststroke"],
+    notes: "Kickboard drills and breathing rhythm.",
+    status: "planned",
+  },
+];
+
 function dateStringFromOffset(daysOffset: number): string {
   const d = new Date();
   d.setDate(d.getDate() - daysOffset);
@@ -288,6 +362,7 @@ export const seed = action({
     }
 
     await ctx.runMutation(internal.skills.backfill, {});
+    const groupIds = await ctx.runMutation(internal.seed.upsertDemoGroups, {});
 
     for (const demo of DEMO_STUDENTS) {
       const created = await createAccount(ctx, {
@@ -303,7 +378,17 @@ export const seed = action({
       });
       const studentId: Id<"students"> = await ctx.runMutation(
         internal.students.createProfile,
-        { userId: created.user._id, status: "active" },
+        {
+          userId: created.user._id,
+          status: "active",
+          groupId:
+            demo.group === "Development"
+              ? groupIds.developmentId
+              : groupIds.competitiveId,
+          dateOfBirth: demo.dateOfBirth,
+          sex: demo.sex,
+          joinedAt: dateStringFromOffset(JOINED_AT_DAYS_AGO),
+        },
       );
 
       const sessionCounts = new Map<string, number>();
@@ -352,7 +437,89 @@ export const seed = action({
       });
     }
 
+    await ctx.runMutation(internal.seed.addDemoPractices, {
+      practices: DEMO_PRACTICES.map((practice) => ({
+        groupId:
+          practice.groupName === "Development"
+            ? groupIds.developmentId
+            : groupIds.competitiveId,
+        date: dateStringFromOffset(-practice.daysOffset),
+        startTime: practice.startTime,
+        title: practice.title,
+        plannedDurationMinutes: practice.plannedDurationMinutes,
+        plannedDistanceMeters: practice.plannedDistanceMeters,
+        strokes: practice.strokes,
+        notes: practice.notes,
+        status: practice.status,
+      })),
+    });
+
     return { created: DEMO_STUDENTS.length };
+  },
+});
+
+export const upsertDemoGroups = internalMutation({
+  args: {},
+  returns: v.object({
+    competitiveId: v.id("groups"),
+    developmentId: v.id("groups"),
+  }),
+  handler: async (ctx) => {
+    async function upsert(name: string): Promise<Id<"groups">> {
+      const groups = await ctx.db
+        .query("groups")
+        .withIndex("by_status", (q) => q.eq("status", "active"))
+        .take(500);
+      const existing = groups.find(
+        (g) => g.name.toLowerCase() === name.toLowerCase(),
+      );
+      if (existing) return existing._id;
+      return ctx.db.insert("groups", {
+        name,
+        status: "active",
+        updatedAt: Date.now(),
+      });
+    }
+    return {
+      competitiveId: await upsert("Competitive"),
+      developmentId: await upsert("Development"),
+    };
+  },
+});
+
+export const addDemoPractices = internalMutation({
+  args: {
+    practices: v.array(
+      v.object({
+        groupId: v.id("groups"),
+        date: v.string(),
+        startTime: v.string(),
+        title: v.string(),
+        plannedDurationMinutes: v.number(),
+        plannedDistanceMeters: v.number(),
+        strokes: v.array(v.string()),
+        notes: v.string(),
+        status: v.union(v.literal("planned"), v.literal("completed")),
+      }),
+    ),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    for (const practice of args.practices) {
+      const endOfDay = Date.parse(`${practice.date}T17:00:00Z`);
+      await ctx.db.insert("practices", {
+        ...practice,
+        ...(practice.status === "completed"
+          ? {
+              completedAt: endOfDay,
+              actualDurationMinutes: practice.plannedDurationMinutes,
+              actualDistanceMeters: practice.plannedDistanceMeters,
+            }
+          : {}),
+        updatedAt: endOfDay,
+      });
+    }
+    return null;
   },
 });
 
@@ -403,6 +570,7 @@ export const resetDemo = action({
     removedStudents: number;
     remainingStudents: number;
   }> => {
+    await ctx.runMutation(internal.seed.deleteDemoGroupsAndPractices, {});
     let removed = 0;
     for (const email of DEMO_STUDENTS.map((demo) => demo.email)) {
       const userId: string | null = await ctx.runQuery(
@@ -501,8 +669,37 @@ export const deleteUserCascade = internalMutation({
   },
 });
 
-export const addStudentData = internalMutation({
-  args: {
+/**
+ * Internal: removes the demo groups ("Competitive"/"Development") and
+ * every practice scheduled for them. Manually created groups and
+ * practices for other groups are untouched.
+ */
+export const deleteDemoGroupsAndPractices = internalMutation({
+  args: {},
+  returns: v.object({ removedPractices: v.number(), removedGroups: v.number() }),
+  handler: async (ctx) => {
+    const groups = await ctx.db.query("groups").take(500);
+    const demoNames = new Set(["competitive", "development"]);
+    const demoGroups = groups.filter((g) =>
+      demoNames.has(g.name.trim().toLowerCase()),
+    );
+    let removedPractices = 0;
+    for (const group of demoGroups) {
+      const practices = await ctx.db
+        .query("practices")
+        .withIndex("by_group_and_date", (q) => q.eq("groupId", group._id))
+        .take(1000);
+      for (const practice of practices) {
+        await ctx.db.delete("practices", practice._id);
+        removedPractices += 1;
+      }
+      await ctx.db.delete("groups", group._id);
+    }
+    return { removedPractices, removedGroups: demoGroups.length };
+  },
+});
+
+export const addStudentData = internalMutation({  args: {
     studentId: v.id("students"),
     skills: v.array(
       v.object({ key: v.string(), progress: v.number() }),
