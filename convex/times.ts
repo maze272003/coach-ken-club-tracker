@@ -508,8 +508,84 @@ export const myPersonalBests = query({
 });
 
 /**
+ * Student-only: list chronological swim times for the signed-in student.
+ */
+export const myTimes = query({
+  args: {
+    stroke: v.optional(v.string()),
+    distanceMeters: v.optional(v.number()),
+    course: v.optional(courseValidator),
+    context: v.optional(contextValidator),
+  },
+  returns: v.array(timeResultRecord),
+  handler: async (ctx, args) => {
+    const self = await requireStudent(ctx);
+    if (!self) throw new ConvexError(NOT_AUTHORIZED);
+    const studentId = self.student._id;
+
+    let timesQuery;
+    if (
+      args.stroke !== undefined &&
+      args.distanceMeters !== undefined &&
+      args.course !== undefined
+    ) {
+      timesQuery = ctx.db
+        .query("timeResults")
+        .withIndex("by_student_and_event", (q) =>
+          q
+            .eq("studentId", studentId)
+            .eq("stroke", args.stroke!)
+            .eq("distanceMeters", args.distanceMeters!)
+            .eq("course", args.course!),
+        );
+    } else {
+      timesQuery = ctx.db
+        .query("timeResults")
+        .withIndex("by_student_and_date", (q) => q.eq("studentId", studentId));
+    }
+
+    let allTimes = await timesQuery.order("desc").take(1000);
+
+    if (args.context !== undefined) {
+      allTimes = allTimes.filter((t) => t.context === args.context);
+    }
+
+    // Calculate best time per event to mark PB flag
+    const bestByEvent = new Map<string, number>();
+    for (const t of allTimes) {
+      const eventKey = `${t.stroke}-${t.distanceMeters}-${t.course}`;
+      const cur = bestByEvent.get(eventKey);
+      if (cur === undefined || t.timeMs < cur) {
+        bestByEvent.set(eventKey, t.timeMs);
+      }
+    }
+
+    return allTimes.map((t) => {
+      const eventKey = `${t.stroke}-${t.distanceMeters}-${t.course}`;
+      const best = bestByEvent.get(eventKey);
+      return {
+        _id: t._id,
+        studentId: t.studentId,
+        date: t.date,
+        distanceMeters: t.distanceMeters,
+        stroke: t.stroke,
+        course: t.course,
+        timeMs: t.timeMs,
+        formattedTime: formatTimeMs(t.timeMs),
+        context: t.context,
+        event: formatEventName(t.distanceMeters, t.stroke, t.course),
+        notes: t.notes ?? null,
+        isPersonalBest: best !== undefined && t.timeMs === best,
+        updatedAt: t.updatedAt,
+      };
+    });
+  },
+});
+
+/**
  * Coach-only: squad-wide recent times feed.
  */
+
 export const listRecent = query({
   args: {
     limit: v.optional(v.number()),

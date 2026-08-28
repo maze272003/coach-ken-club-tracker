@@ -7,7 +7,9 @@ import { AppShell, type NavItem } from "@/components/layout/app-shell";
 const navItems: NavItem[] = [
   { href: "/student/dashboard", label: "Dashboard", icon: "LayoutDashboard", exact: true },
   { href: "/student/attendance", label: "Attendance", icon: "ClipboardCheck" },
+  { href: "/student/times", label: "Times & PBs", icon: "Timer" },
   { href: "/student/training", label: "Training Sessions", icon: "CalendarDays" },
+
   { href: "/student/skills", label: "Skills", icon: "Gauge" },
   { href: "/student/goals", label: "Goals", icon: "Target" },
   { href: "/student/profile", label: "Profile", icon: "User", exact: true },

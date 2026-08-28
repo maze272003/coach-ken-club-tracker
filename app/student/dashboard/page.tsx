@@ -7,7 +7,9 @@ import {
   ClipboardCheck,
   Gauge,
   Target,
+  Trophy,
 } from "lucide-react";
+
 import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -22,6 +24,7 @@ import { useSkillCatalog } from "@/lib/use-skill-catalog";
 export default function StudentDashboardPage() {
   const data = useQuery(api.dashboard.studentDashboard, {});
   const me = useQuery(api.users.currentUser, {});
+  const pbs = useQuery(api.times.myPersonalBests, {});
   const { label } = useSkillCatalog();
 
   const firstName = (me?.name ?? "").split(/\s+/)[0] ?? "";
@@ -35,7 +38,8 @@ export default function StudentDashboardPage() {
 
       {data === undefined ? (
         <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Skeleton className="h-28 rounded-xl" />
             <Skeleton className="h-28 rounded-xl" />
             <Skeleton className="h-28 rounded-xl" />
           </div>
@@ -47,7 +51,7 @@ export default function StudentDashboardPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <StatCard
               icon={ClipboardCheck}
               label="Attendance"
@@ -74,7 +78,18 @@ export default function StudentDashboardPage() {
                   : "Average across your skills"
               }
             />
+            <StatCard
+              icon={Trophy}
+              label="Personal Bests"
+              value={pbs === undefined ? "—" : String(pbs.length)}
+              hint={
+                pbs === undefined || pbs.length === 0
+                  ? "No official PBs recorded"
+                  : `${pbs.length} official event records`
+              }
+            />
           </div>
+
 
           <Card>
             <CardHeader className="pb-3">
