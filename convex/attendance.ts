@@ -65,6 +65,65 @@ export const record = mutation({
 });
 
 /**
+ * Coach-only: record or update roll call for many students on one
+ * date in a single transaction. One record per student per date
+ * (upsert, duplicates last-wins), max 200 entries.
+ */
+export const recordBulk = mutation({
+  args: {
+    date: v.string(),
+    entries: v.array(
+      v.object({
+        studentId: v.id("students"),
+        status: attendanceStatusValidator,
+      }),
+    ),
+  },
+  returns: v.object({ recorded: v.number() }),
+  handler: async (ctx, args) => {
+    const coach = await requireCoach(ctx);
+    if (!coach) throw new ConvexError(NOT_AUTHORIZED);
+    assertDateString(args.date);
+    if (args.entries.length === 0) {
+      throw new ConvexError("At least one entry is required");
+    }
+    if (args.entries.length > 200) {
+      throw new ConvexError("At most 200 entries per roll call");
+    }
+
+    const byStudent = new Map(
+      args.entries.map((entry) => [entry.studentId, entry.status]),
+    );
+    let recorded = 0;
+    for (const [studentId, status] of byStudent) {
+      const student = await ctx.db.get("students", studentId);
+      if (!student) throw new ConvexError("Student not found");
+      const existing = await ctx.db
+        .query("attendance")
+        .withIndex("by_student_and_date", (q) =>
+          q.eq("studentId", studentId).eq("date", args.date),
+        )
+        .unique();
+      if (existing) {
+        await ctx.db.patch("attendance", existing._id, {
+          status,
+          updatedAt: Date.now(),
+        });
+      } else {
+        await ctx.db.insert("attendance", {
+          studentId,
+          date: args.date,
+          status,
+          updatedAt: Date.now(),
+        });
+      }
+      recorded += 1;
+    }
+    return { recorded };
+  },
+});
+
+/**
  * Coach or owning student: attendance history plus derived stats.
  * A student calling with someone else's studentId gets nothing.
  */
@@ -195,7 +254,10 @@ export const monthSummary = query({
  * given date — the daily roll-call view.
  */
 export const rollCall = query({
-  args: { date: v.string() },
+  args: {
+    date: v.string(),
+    groupId: v.optional(v.union(v.id("groups"), v.null())),
+  },
   returns: v.array(
     v.object({
       studentId: v.id("students"),
@@ -217,6 +279,13 @@ export const rollCall = query({
     const rows = await Promise.all(
       students.map(async (student) => {
         if (student.status !== "active") return null;
+        if (args.groupId !== undefined) {
+          if (args.groupId === null) {
+            if (student.groupId !== undefined) return null;
+          } else if (student.groupId !== args.groupId) {
+            return null;
+          }
+        }
         const user = await ctx.db.get("users", student.userId);
         if (!user) return null;
         const record = await ctx.db
