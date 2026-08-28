@@ -26,11 +26,12 @@ distanceMeters, intensity, strokes[], practiceId, notes),
 free-text target).
 
 **Implementation status (Rev 2):** M1 Groups and M2 Profiles are
-shipped. M3 is partial — `practices.create/update/cancel/listForGroup/
-listUpcoming` are live, but the `complete` fan-out mutation is not
-implemented (a TDD red-phase test, `convex/practices-complete.test.ts`,
-is staged and awaiting implementation). M4 `recordBulk` is not started.
-M5–S6 and the P2/P3 items remain design-only.
+shipped. M3 planning (`create/update/cancel/list*`) is shipped; the
+`complete` fan-out mutation and `commitmentStats` helper landed in the
+working tree during this review (uncommitted at Rev 2 commit time,
+alongside the staged red test `convex/practices-complete.test.ts`).
+M4 `recordBulk` is not started. M5–S6 and the P2/P3 items remain
+design-only.
 
 Confirmed remaining gaps: no practice completion fan-out or bulk roll
 call (sessions are still logged one swimmer at a time), no race times
@@ -413,8 +414,10 @@ Phase 4 (engagement):  S4 Rankings → S5 Student v2 → S6 Notifications
 ```
 
 **Rev 2 status:** Phase 1 is mid-flight — M1/M2 shipped, M3 planning
-shipped, M3 `complete` fan-out has a staged red test, M4 not started.
-The immediate next work is finishing Phase 1 per the existing plan
+shipped, M3 `complete` fan-out + commitment % implemented in the working
+tree (pending commit), M4 not started. The immediate next work is
+finishing Phase 1 (M4 bulk roll call, dashboard Today strip, then
+committing and verifying the M3 fan-out) per the existing plan
 (`docs/superpowers/plans/2026-08-28-phase1-groups-profiles-practices-rollcall.md`)
 before opening Phase 2.
 
@@ -437,8 +440,8 @@ Full-codebase re-review (schema, all Convex modules, UI surface, git
 history) confirmed the roadmap direction and produced these changes:
 
 - **Current State rewritten** with implementation status: M1/M2 shipped;
-  M3 partial (`complete` fan-out missing, red test
-  `convex/practices-complete.test.ts` staged); M4 `recordBulk` missing.
+  M3 `complete` fan-out + commitment % landed in the working tree during
+  the review (parallel session); M4 `recordBulk` missing.
 - **Priority corrections:** commitment % (M3) confirmed P0 — it fixes the
   "silent dropout" flaw where attendance % only counts recorded days. The
   dashboard "today strip" with roll-call/complete shortcuts is P0 scope of
