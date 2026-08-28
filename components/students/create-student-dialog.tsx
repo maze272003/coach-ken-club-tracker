@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAction } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { toast } from "sonner";
 import { UserPlus } from "lucide-react";
 import { z } from "zod";
@@ -47,6 +47,9 @@ type FormState = {
   password: string;
   confirmPassword: string;
   status: "active" | "inactive";
+  groupId: string;
+  dateOfBirth: string;
+  sex: string;
 };
 
 const initialState: FormState = {
@@ -55,6 +58,9 @@ const initialState: FormState = {
   password: "",
   confirmPassword: "",
   status: "active",
+  groupId: "unassigned",
+  dateOfBirth: "",
+  sex: "unset",
 };
 
 export function CreateStudentDialog({
@@ -68,6 +74,8 @@ export function CreateStudentDialog({
   const [error, setError] = useState<string | null>(null);
   const createStudent = useAction(api.students.create);
   const [submitting, setSubmitting] = useState(false);
+  const groups = useQuery(api.groups.list, {});
+  const activeGroups = (groups ?? []).filter((g) => g.status === "active");
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -103,6 +111,11 @@ export function CreateStudentDialog({
         email: parsed.data.email,
         password: parsed.data.password,
         status: parsed.data.status,
+        ...(form.groupId !== "unassigned"
+          ? { groupId: form.groupId as never }
+          : {}),
+        ...(form.dateOfBirth ? { dateOfBirth: form.dateOfBirth } : {}),
+        ...(form.sex !== "unset" ? { sex: form.sex as "M" | "F" } : {}),
       });
       toast.success("Student account created successfully.");
       setOpen(false);
@@ -232,6 +245,55 @@ export function CreateStudentDialog({
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="student-group">Training group</Label>
+            <Select
+              value={form.groupId}
+              onValueChange={(value) => update("groupId", value)}
+              disabled={submitting || groups === undefined}
+            >
+              <SelectTrigger id="student-group" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {activeGroups.map((group) => (
+                  <SelectItem key={group.groupId} value={group.groupId}>
+                    {group.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="student-dob">Date of birth (optional)</Label>
+              <Input
+                id="student-dob"
+                type="date"
+                value={form.dateOfBirth}
+                onChange={(e) => update("dateOfBirth", e.target.value)}
+                disabled={submitting}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="student-sex">Sex (optional)</Label>
+              <Select
+                value={form.sex}
+                onValueChange={(value) => update("sex", value)}
+                disabled={submitting}
+              >
+                <SelectTrigger id="student-sex" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unset">Not set</SelectItem>
+                  <SelectItem value="M">Male</SelectItem>
+                  <SelectItem value="F">Female</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button

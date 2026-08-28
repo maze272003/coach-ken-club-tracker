@@ -25,6 +25,20 @@ export function formatRelativeTime(ms: number): string {
   });
 }
 
+/**
+ * Whole-year age from a "YYYY-MM-DD" date of birth (no timezone math).
+ */
+export function ageYears(dob: string): number {
+  const birth = new Date(dob + "T00:00:00");
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const beforeBirthday =
+    now.getMonth() < birth.getMonth() ||
+    (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate());
+  if (beforeBirthday) age -= 1;
+  return age;
+}
+
 export function todayDateString(): string {
   const now = new Date();
   const y = now.getFullYear();

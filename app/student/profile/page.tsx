@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { errorMessage } from "@/lib/format";
+import { errorMessage, formatDate } from "@/lib/format";
 
 const profileSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -184,6 +184,28 @@ export default function StudentProfilePage() {
             <h2 className="text-sm font-semibold text-muted-foreground">
               Training Summary
             </h2>
+            <Card>
+              <CardHeader>
+                <CardTitle>Athlete Info</CardTitle>
+                <CardDescription>Managed by your coach.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-1 text-sm">
+                {profile.dateOfBirth ? (
+                  <span>Born {formatDate(profile.dateOfBirth)}</span>
+                ) : null}
+                {profile.sex ? (
+                  <span>{profile.sex === "M" ? "Male" : "Female"}</span>
+                ) : null}
+                {profile.joinedAt ? (
+                  <span>Joined team {formatDate(profile.joinedAt)}</span>
+                ) : null}
+                {!profile.dateOfBirth && !profile.sex && !profile.joinedAt ? (
+                  <span className="text-muted-foreground">
+                    No athlete details recorded yet.
+                  </span>
+                ) : null}
+              </CardContent>
+            </Card>
             <StatCard
               icon={ClipboardCheck}
               label="Attendance"

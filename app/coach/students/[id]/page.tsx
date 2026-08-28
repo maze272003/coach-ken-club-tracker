@@ -33,7 +33,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatDate } from "@/lib/format";
+import { ageYears, formatDate } from "@/lib/format";
 
 export default function CoachStudentDetailPage() {
   const params = useParams<{ id: string }>();
@@ -113,7 +113,14 @@ export default function CoachStudentDetailPage() {
                 name: student.name,
                 status: student.status,
                 image: student.image ?? "",
-                groupId: null,
+                groupId: student.groupId,
+                dateOfBirth: student.dateOfBirth ?? "",
+                sex: student.sex ?? "unset",
+                parentName: student.parentName ?? "",
+                parentPhone: student.parentPhone ?? "",
+                parentEmail: student.parentEmail ?? "",
+                joinedAt: student.joinedAt ?? "",
+                medicalNotes: student.medicalNotes ?? "",
               }}
             />
             <ResetPasswordDialog studentId={student.studentId} />
@@ -122,7 +129,7 @@ export default function CoachStudentDetailPage() {
       />
 
       <Card>
-        <CardContent className="flex flex-wrap items-center gap-4">
+        <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-3">
           <StudentAvatar
             name={student.name}
             image={student.image}
@@ -132,6 +139,14 @@ export default function CoachStudentDetailPage() {
             <Badge variant={student.status === "active" ? "default" : "secondary"}>
               {student.status === "active" ? "Active" : "Inactive"}
             </Badge>
+            {student.groupName ? (
+              <Badge variant="outline">{student.groupName}</Badge>
+            ) : null}
+            {student.dateOfBirth ? (
+              <span className="text-muted-foreground">
+                {ageYears(student.dateOfBirth)} years old
+              </span>
+            ) : null}
             <span className="text-muted-foreground">
               Member since{" "}
               {new Date(student.createdAtMs).toLocaleDateString("en-US", {
@@ -139,7 +154,27 @@ export default function CoachStudentDetailPage() {
                 year: "numeric",
               })}
             </span>
+            {student.joinedAt ? (
+              <span className="text-muted-foreground">
+                Joined team {formatDate(student.joinedAt)}
+              </span>
+            ) : null}
           </div>
+          {student.parentName ||
+          student.parentPhone ||
+          student.parentEmail ||
+          student.medicalNotes ? (
+            <div className="ml-auto grid gap-0.5 text-right text-sm text-muted-foreground">
+              {student.parentName ? <span>{student.parentName}</span> : null}
+              {student.parentPhone ? <span>{student.parentPhone}</span> : null}
+              {student.parentEmail ? <span>{student.parentEmail}</span> : null}
+              {student.medicalNotes ? (
+                <span className="font-medium text-foreground">
+                  Medical: {student.medicalNotes}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 

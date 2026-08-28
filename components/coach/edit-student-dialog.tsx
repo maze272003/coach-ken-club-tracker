@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Textarea } from "@/components/ui/textarea";
 import { errorMessage } from "@/lib/format";
 
 const profileSchema = z.object({
@@ -44,13 +45,34 @@ export function EditStudentDialog({
   initial,
 }: {
   studentId: string;
-  initial: { name: string; status: "active" | "inactive"; image: string; groupId: string | null };
+  initial: {
+    name: string;
+    status: "active" | "inactive";
+    image: string;
+    groupId: string | null;
+    dateOfBirth: string;
+    sex: string;
+    parentName: string;
+    parentPhone: string;
+    parentEmail: string;
+    joinedAt: string;
+    medicalNotes: string;
+  };
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(initial.name);
   const [status, setStatus] = useState<"active" | "inactive">(initial.status);
   const [image, setImage] = useState(initial.image);
   const [groupId, setGroupId] = useState<string>(initial.groupId ?? "unassigned");
+  const [dateOfBirth, setDateOfBirth] = useState(initial.dateOfBirth);
+  const [sex, setSex] = useState(
+    initial.sex === "M" || initial.sex === "F" ? initial.sex : "unset",
+  );
+  const [parentName, setParentName] = useState(initial.parentName);
+  const [parentPhone, setParentPhone] = useState(initial.parentPhone);
+  const [parentEmail, setParentEmail] = useState(initial.parentEmail);
+  const [joinedAt, setJoinedAt] = useState(initial.joinedAt);
+  const [medicalNotes, setMedicalNotes] = useState(initial.medicalNotes);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -81,6 +103,13 @@ export function EditStudentDialog({
         name: parsed.data.name,
         status: parsed.data.status,
         image: parsed.data.image === "" ? null : parsed.data.image,
+        ...(dateOfBirth ? { dateOfBirth } : {}),
+        ...(sex !== "unset" ? { sex: sex as "M" | "F" } : {}),
+        ...(parentName ? { parentName } : {}),
+        ...(parentPhone ? { parentPhone } : {}),
+        ...(parentEmail ? { parentEmail } : {}),
+        ...(joinedAt ? { joinedAt } : {}),
+        ...(medicalNotes ? { medicalNotes } : {}),
       });
       if (groupId !== (initial.groupId ?? "unassigned")) {
         await assignStudent({
@@ -105,12 +134,12 @@ export function EditStudentDialog({
           Edit Profile
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Edit Student</DialogTitle>
           <DialogDescription>
-            Update the student&apos;s name, avatar or account status. The email
-            address cannot be changed.
+            Update the swimmer&apos;s profile, group and account status. The
+            email address cannot be changed.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
@@ -164,6 +193,81 @@ export function EditStudentDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="edit-dob">Date of birth</Label>
+              <Input
+                id="edit-dob"
+                type="date"
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+                disabled={submitting}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="edit-sex">Sex</Label>
+              <Select value={sex} onValueChange={setSex} disabled={submitting}>
+                <SelectTrigger id="edit-sex" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unset">Not set</SelectItem>
+                  <SelectItem value="M">Male</SelectItem>
+                  <SelectItem value="F">Female</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="edit-joined">Joined team on</Label>
+            <Input
+              id="edit-joined"
+              type="date"
+              value={joinedAt}
+              onChange={(e) => setJoinedAt(e.target.value)}
+              disabled={submitting}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="edit-parent-name">Parent name</Label>
+              <Input
+                id="edit-parent-name"
+                value={parentName}
+                onChange={(e) => setParentName(e.target.value)}
+                disabled={submitting}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="edit-parent-phone">Parent phone</Label>
+              <Input
+                id="edit-parent-phone"
+                value={parentPhone}
+                onChange={(e) => setParentPhone(e.target.value)}
+                disabled={submitting}
+              />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="edit-parent-email">Parent email</Label>
+            <Input
+              id="edit-parent-email"
+              type="email"
+              value={parentEmail}
+              onChange={(e) => setParentEmail(e.target.value)}
+              disabled={submitting}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="edit-medical">Medical notes (coach only)</Label>
+            <Textarea
+              id="edit-medical"
+              value={medicalNotes}
+              onChange={(e) => setMedicalNotes(e.target.value)}
+              disabled={submitting}
+              rows={2}
+            />
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="edit-status">Status</Label>
