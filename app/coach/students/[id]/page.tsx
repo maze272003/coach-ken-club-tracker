@@ -308,6 +308,11 @@ export default function CoachStudentDetailPage() {
                         date: session.date,
                         title: session.title,
                         durationMinutes: String(session.durationMinutes),
+                        distanceMeters:
+                          session.distanceMeters === null
+                            ? ""
+                            : String(session.distanceMeters),
+                        intensity: session.intensity ?? "unset",
                         strokes: session.strokes,
                         notes: session.notes ?? "",
                       }}

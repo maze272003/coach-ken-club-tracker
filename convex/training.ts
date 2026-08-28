@@ -3,7 +3,7 @@ import { ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireCoach, requireStudent, resolveStudentAccess } from "./lib/access";
 import { assertExistingSkillKeys } from "./skills";
-import { assertDateString, assertDuration } from "./lib/validation";
+import { assertDateString, assertDistanceMeters, assertDuration } from "./lib/validation";
 
 const NOT_AUTHORIZED = "Not authorized";
 
@@ -11,6 +11,10 @@ const sessionFields = {
   date: v.string(),
   title: v.string(),
   durationMinutes: v.number(),
+  distanceMeters: v.optional(v.number()),
+  intensity: v.optional(
+    v.union(v.literal("easy"), v.literal("moderate"), v.literal("hard")),
+  ),
   strokes: v.array(v.string()),
   notes: v.optional(v.string()),
 };
@@ -21,6 +25,13 @@ const sessionRecord = v.object({
   date: v.string(),
   title: v.string(),
   durationMinutes: v.number(),
+  distanceMeters: v.union(v.number(), v.null()),
+  intensity: v.union(
+    v.literal("easy"),
+    v.literal("moderate"),
+    v.literal("hard"),
+    v.null(),
+  ),
   strokes: v.array(v.string()),
   notes: v.union(v.string(), v.null()),
 });
@@ -29,6 +40,8 @@ function validateSessionFields(args: {
   date: string;
   title: string;
   durationMinutes: number;
+  distanceMeters?: number;
+  intensity?: "easy" | "moderate" | "hard";
   strokes: string[];
   notes?: string;
 }) {
@@ -38,6 +51,9 @@ function validateSessionFields(args: {
     throw new ConvexError("Title must be between 1 and 120 characters");
   }
   assertDuration(args.durationMinutes);
+  if (args.distanceMeters !== undefined) {
+    assertDistanceMeters(args.distanceMeters);
+  }
   const strokes = [...new Set(args.strokes)];
   if (strokes.length === 0) {
     throw new ConvexError("Select at least one skill");
@@ -49,6 +65,8 @@ function validateSessionFields(args: {
     date: args.date,
     title,
     durationMinutes: args.durationMinutes,
+    distanceMeters: args.distanceMeters,
+    intensity: args.intensity,
     strokes,
     notes: args.notes?.trim() || undefined,
   };
@@ -125,6 +143,8 @@ export const listForStudent = query({
       date: s.date,
       title: s.title,
       durationMinutes: s.durationMinutes,
+      distanceMeters: s.distanceMeters ?? null,
+      intensity: s.intensity ?? null,
       strokes: s.strokes,
       notes: s.notes ?? null,
     }));
@@ -155,6 +175,8 @@ export const mySessions = query({
       date: s.date,
       title: s.title,
       durationMinutes: s.durationMinutes,
+      distanceMeters: s.distanceMeters ?? null,
+      intensity: s.intensity ?? null,
       strokes: s.strokes,
       notes: s.notes ?? null,
     }));
@@ -174,6 +196,13 @@ export const listRecent = query({
       date: v.string(),
       title: v.string(),
       durationMinutes: v.number(),
+      distanceMeters: v.union(v.number(), v.null()),
+      intensity: v.union(
+        v.literal("easy"),
+        v.literal("moderate"),
+        v.literal("hard"),
+        v.null(),
+      ),
       strokes: v.array(v.string()),
       notes: v.union(v.string(), v.null()),
     }),
@@ -208,6 +237,8 @@ export const listRecent = query({
           date: s.date,
           title: s.title,
           durationMinutes: s.durationMinutes,
+          distanceMeters: s.distanceMeters ?? null,
+          intensity: s.intensity ?? null,
           strokes: s.strokes,
           notes: s.notes ?? null,
         };

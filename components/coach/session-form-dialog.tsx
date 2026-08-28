@@ -40,6 +40,14 @@ const sessionSchema = z.object({
     .int("Duration must be a whole number")
     .positive("Duration must be positive")
     .max(1440, "Duration must be at most 1440 minutes"),
+  distanceMeters: z
+    .string()
+    .refine(
+      (v) =>
+        v === "" ||
+        (/^\d+$/.test(v) && Number(v) >= 1 && Number(v) <= 30000),
+      "Distance must be between 1 and 30000 meters",
+    ),
   strokes: z.array(z.string()).min(1, "Select at least one skill"),
   notes: z.string().trim().max(2000, "Notes must be at most 2000 characters"),
 });
@@ -49,6 +57,8 @@ export type SessionFormValues = {
   date: string;
   title: string;
   durationMinutes: string;
+  distanceMeters: string;
+  intensity: string;
   strokes: string[];
   notes: string;
 };
@@ -72,6 +82,8 @@ export function SessionFormDialog({
     date: initial?.date ?? todayDateString(),
     title: initial?.title ?? "",
     durationMinutes: initial?.durationMinutes ?? "60",
+    distanceMeters: initial?.distanceMeters ?? "",
+    intensity: initial?.intensity ?? "unset",
     strokes: initial?.strokes ?? [],
     notes: initial?.notes ?? "",
   });
@@ -135,6 +147,12 @@ export function SessionFormDialog({
       date: parsed.data.date,
       title: parsed.data.title,
       durationMinutes: parsed.data.durationMinutes,
+      ...(parsed.data.distanceMeters !== ""
+        ? { distanceMeters: Number(parsed.data.distanceMeters) }
+        : {}),
+      ...(form.intensity !== "unset"
+        ? { intensity: form.intensity as "easy" | "moderate" | "hard" }
+        : {}),
       strokes: parsed.data.strokes,
       notes: parsed.data.notes === "" ? undefined : parsed.data.notes,
     };
@@ -203,7 +221,7 @@ export function SessionFormDialog({
               ) : null}
             </div>
           ) : null}
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <div className="flex flex-col gap-2">
               <Label htmlFor="session-date">Date</Label>
               <Input
@@ -234,6 +252,41 @@ export function SessionFormDialog({
                 </p>
               ) : null}
             </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="session-distance">Distance (m, optional)</Label>
+              <Input
+                id="session-distance"
+                type="number"
+                min={1}
+                max={30000}
+                value={form.distanceMeters}
+                onChange={(e) => update("distanceMeters", e.target.value)}
+                disabled={submitting}
+              />
+              {fieldErrors.distanceMeters ? (
+                <p className="text-xs text-destructive">
+                  {fieldErrors.distanceMeters}
+                </p>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="session-intensity">Intensity (optional)</Label>
+            <Select
+              value={form.intensity}
+              onValueChange={(value) => update("intensity", value)}
+              disabled={submitting}
+            >
+              <SelectTrigger id="session-intensity" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unset">Not set</SelectItem>
+                <SelectItem value="easy">Easy</SelectItem>
+                <SelectItem value="moderate">Moderate</SelectItem>
+                <SelectItem value="hard">Hard</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="session-title">Title</Label>
