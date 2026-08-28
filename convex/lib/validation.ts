@@ -133,3 +133,42 @@ export function assertDateOfBirth(value: string): void {
     throw new ConvexError("Date of birth must be within the last 100 years");
   }
 }
+
+export const VALID_DISTANCES = [25, 50, 100, 200, 400, 800, 1500] as const;
+export type EventDistance = (typeof VALID_DISTANCES)[number];
+
+export const VALID_STROKES = [
+  "freestyle",
+  "backstroke",
+  "breaststroke",
+  "butterfly",
+  "im",
+] as const;
+export type ValidStroke = (typeof VALID_STROKES)[number];
+
+export function assertTimeMs(ms: number): void {
+  if (!Number.isInteger(ms) || ms <= 0 || ms > 3600000) {
+    throw new ConvexError("Time must be between 0.01s and 60 minutes");
+  }
+}
+
+export function assertEventDistance(distance: number): asserts distance is EventDistance {
+  if (!VALID_DISTANCES.includes(distance as any)) {
+    throw new ConvexError(
+      `Invalid distance. Must be one of: ${VALID_DISTANCES.join(", ")}m`,
+    );
+  }
+}
+
+export function assertCourse(course: string): asserts course is "short" | "long" {
+  if (course !== "short" && course !== "long") {
+    throw new ConvexError("Course must be 'short' (25m) or 'long' (50m)");
+  }
+}
+
+export function assertStroke(stroke: string): asserts stroke is ValidStroke {
+  if (!VALID_STROKES.includes(stroke as any)) {
+    throw new ConvexError(`Invalid stroke: ${stroke}`);
+  }
+}
+
