@@ -159,6 +159,140 @@ export const create = mutation({
 });
 
 /**
+ * Coach-only: atomically record swim times for an entire group in a time trial.
+ * Evaluates PBs for every student and returns all newly achieved PBs in one batch.
+ */
+export const recordBulk = mutation({
+  args: {
+    groupId: v.id("groups"),
+    date: v.string(),
+    distanceMeters: v.number(),
+    stroke: strokeValidator,
+    course: courseValidator,
+    context: contextValidator,
+    entries: v.array(
+      v.object({
+        studentId: v.id("students"),
+        timeMs: v.number(),
+        notes: v.optional(v.string()),
+      }),
+    ),
+  },
+  returns: v.object({
+    recordedCount: v.number(),
+    newPersonalBests: v.array(
+      v.object({
+        studentId: v.id("students"),
+        studentName: v.string(),
+        timeMs: v.number(),
+        formattedTime: v.string(),
+        deltaMs: v.union(v.number(), v.null()),
+        deltaPct: v.union(v.number(), v.null()),
+      }),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    const coach = await requireCoach(ctx);
+    if (!coach) throw new ConvexError(NOT_AUTHORIZED);
+
+    const group = await ctx.db.get("groups", args.groupId);
+    if (!group) throw new ConvexError("Group not found");
+
+    assertDateString(args.date);
+    assertEventDistance(args.distanceMeters);
+    assertStroke(args.stroke);
+    assertCourse(args.course);
+
+    if (args.entries.length === 0) {
+      throw new ConvexError("At least one swimmer time entry is required");
+    }
+    if (args.entries.length > 200) {
+      throw new ConvexError("At most 200 entries per batch");
+    }
+
+    const newPersonalBests: Array<{
+      studentId: Id<"students">;
+      studentName: string;
+      timeMs: number;
+      formattedTime: string;
+      deltaMs: number | null;
+      deltaPct: number | null;
+    }> = [];
+
+    let recordedCount = 0;
+
+    for (const entry of args.entries) {
+      const student = await ctx.db.get("students", entry.studentId);
+      if (!student) throw new ConvexError("Student not found");
+      assertTimeMs(entry.timeMs);
+
+      const user = await ctx.db.get("users", student.userId);
+      const studentName = user?.name ?? "Swimmer";
+
+      const notes = entry.notes?.trim() ? entry.notes.trim().slice(0, 500) : undefined;
+
+      // Check existing times for this student/event
+      const existingTimes = await ctx.db
+        .query("timeResults")
+        .withIndex("by_student_and_event", (q) =>
+          q
+            .eq("studentId", entry.studentId)
+            .eq("stroke", args.stroke)
+            .eq("distanceMeters", args.distanceMeters)
+            .eq("course", args.course),
+        )
+        .take(500);
+
+      let isNewPB = false;
+      let deltaMs: number | null = null;
+      let deltaPct: number | null = null;
+
+      if (existingTimes.length === 0) {
+        isNewPB = true;
+      } else {
+        const previousBestMs = Math.min(...existingTimes.map((t) => t.timeMs));
+        if (entry.timeMs < previousBestMs) {
+          isNewPB = true;
+          deltaMs = previousBestMs - entry.timeMs;
+          deltaPct = Math.round((deltaMs / previousBestMs) * 1000) / 10;
+        }
+      }
+
+      await ctx.db.insert("timeResults", {
+        studentId: entry.studentId,
+        date: args.date,
+        distanceMeters: args.distanceMeters,
+        stroke: args.stroke,
+        course: args.course,
+        timeMs: entry.timeMs,
+        context: args.context,
+        notes,
+        updatedAt: Date.now(),
+      });
+
+      recordedCount += 1;
+
+      if (isNewPB) {
+        newPersonalBests.push({
+          studentId: entry.studentId,
+          studentName,
+          timeMs: entry.timeMs,
+          formattedTime: formatTimeMs(entry.timeMs),
+          deltaMs,
+          deltaPct,
+        });
+      }
+    }
+
+    return {
+      recordedCount,
+      newPersonalBests,
+    };
+  },
+});
+
+
+/**
  * Coach-only: remove an erroneous time result.
  */
 export const remove = mutation({
