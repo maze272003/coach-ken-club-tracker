@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
-import { ClipboardCheck, Sparkles, Target, Timer, Trash2 } from "lucide-react";
+import { ClipboardCheck, Target, Timer, Trash2 } from "lucide-react";
 import { z } from "zod";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -38,8 +37,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { errorMessage, formatTimeMs, parseTimeToMs } from "@/lib/format";
+import { errorMessage, parseTimeToMs } from "@/lib/format";
 import { VALID_DISTANCES, type ValidStroke } from "@/convex/lib/validation";
+
 
 const goalSchema = z.object({
   studentId: z.string().min(1, "Select a student"),

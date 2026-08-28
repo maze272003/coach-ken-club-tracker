@@ -34,11 +34,28 @@ type DemoDay = {
 type DemoGoal = {
   title: string;
   description: string;
-  target: string;
+  type?: "manual" | "time" | "attendance";
+  stroke?: string;
+  distanceMeters?: number;
+  course?: "short" | "long";
+  targetTimeMs?: number;
+  baselineBestMs?: number;
+  targetAttendancePct?: number;
+  target?: string;
   progress: number;
-  status: "not_started" | "in_progress" | "completed";
+  status: "not_started" | "in_progress" | "completed" | "archived";
   targetDateDaysAhead: number;
   updatedDaysAgo: number;
+};
+
+type DemoTime = {
+  daysAgo: number;
+  stroke: string;
+  distanceMeters: number;
+  course: "short" | "long";
+  timeMs: number;
+  context: "practice" | "time_trial" | "meet";
+  notes?: string;
 };
 
 type DemoStudent = {
@@ -54,6 +71,7 @@ type DemoStudent = {
    */
   startingSkills: Record<string, number>;
   days: DemoDay[];
+  times: DemoTime[];
   goals: DemoGoal[];
 };
 
@@ -120,15 +138,66 @@ const DEMO_STUDENTS: DemoStudent[] = [
         },
       },
     ],
+    times: [
+      {
+        daysAgo: 18,
+        stroke: "freestyle",
+        distanceMeters: 50,
+        course: "short",
+        timeMs: 28800,
+        context: "time_trial",
+        notes: "Solid start off blocks.",
+      },
+      {
+        daysAgo: 12,
+        stroke: "freestyle",
+        distanceMeters: 100,
+        course: "short",
+        timeMs: 64500,
+        context: "meet",
+        notes: "Even split pacing.",
+      },
+      {
+        daysAgo: 7,
+        stroke: "butterfly",
+        distanceMeters: 50,
+        course: "short",
+        timeMs: 31400,
+        context: "practice",
+      },
+      {
+        daysAgo: 5,
+        stroke: "freestyle",
+        distanceMeters: 50,
+        course: "short",
+        timeMs: 28200,
+        context: "time_trial",
+        notes: "Huge underwater breakout! New PB.",
+      },
+      {
+        daysAgo: 1,
+        stroke: "freestyle",
+        distanceMeters: 100,
+        course: "short",
+        timeMs: 62100,
+        context: "meet",
+        notes: "District Championship Finals - 2.4s drop!",
+      },
+    ],
     goals: [
       {
-        title: "Improve 100m Freestyle",
-        description: "Improve freestyle speed and endurance.",
-        target: "Complete 100m freestyle under 2:00",
-        progress: 72,
+        title: "Break 1:00 in 100m Free",
+        description: "Targeting sub-1:00 100m freestyle in SCM at Regionals.",
+        type: "time",
+        stroke: "freestyle",
+        distanceMeters: 100,
+        course: "short",
+        targetTimeMs: 60000,
+        baselineBestMs: 64500,
+        progress: 53,
         status: "in_progress",
         targetDateDaysAhead: 45,
-        updatedDaysAgo: 2,
+        updatedDaysAgo: 1,
       },
     ],
   },
@@ -185,19 +254,69 @@ const DEMO_STUDENTS: DemoStudent[] = [
       },
       { daysAgo: 1, status: "absent" },
     ],
+    times: [
+      {
+        daysAgo: 14,
+        stroke: "butterfly",
+        distanceMeters: 50,
+        course: "long",
+        timeMs: 33500,
+        context: "time_trial",
+      },
+      {
+        daysAgo: 9,
+        stroke: "backstroke",
+        distanceMeters: 100,
+        course: "short",
+        timeMs: 68500,
+        context: "meet",
+      },
+      {
+        daysAgo: 9,
+        stroke: "backstroke",
+        distanceMeters: 200,
+        course: "short",
+        timeMs: 148000,
+        context: "meet",
+      },
+      {
+        daysAgo: 5,
+        stroke: "butterfly",
+        distanceMeters: 50,
+        course: "long",
+        timeMs: 32100,
+        context: "meet",
+        notes: "Clean entry and strong finish.",
+      },
+      {
+        daysAgo: 2,
+        stroke: "backstroke",
+        distanceMeters: 100,
+        course: "short",
+        timeMs: 66800,
+        context: "time_trial",
+        notes: "Fast flip turns.",
+      },
+    ],
     goals: [
       {
-        title: "Master Butterfly Technique",
-        description: "Build a consistent two-beat kick and clean breathing.",
-        target: "Swim 50m butterfly without stopping",
-        progress: 45,
+        title: "Sub-31.00 50m Fly (LCM)",
+        description: "Build a consistent two-beat kick and clean breathing in 50m pool.",
+        type: "time",
+        stroke: "butterfly",
+        distanceMeters: 50,
+        course: "long",
+        targetTimeMs: 31000,
+        baselineBestMs: 33500,
+        progress: 56,
         status: "in_progress",
         targetDateDaysAhead: 60,
-        updatedDaysAgo: 3,
+        updatedDaysAgo: 5,
       },
       {
         title: "Complete 200m Backstroke Set",
         description: "Baseline endurance goal for the season.",
+        type: "manual",
         target: "4x50m backstroke under 1:10 each",
         progress: 100,
         status: "completed",
@@ -250,15 +369,43 @@ const DEMO_STUDENTS: DemoStudent[] = [
       { daysAgo: 2, status: "present" },
       { daysAgo: 1, status: "present" },
     ],
+    times: [
+      {
+        daysAgo: 10,
+        stroke: "breaststroke",
+        distanceMeters: 50,
+        course: "short",
+        timeMs: 44500,
+        context: "practice",
+      },
+      {
+        daysAgo: 6,
+        stroke: "freestyle",
+        distanceMeters: 50,
+        course: "short",
+        timeMs: 36200,
+        context: "practice",
+      },
+      {
+        daysAgo: 3,
+        stroke: "breaststroke",
+        distanceMeters: 50,
+        course: "short",
+        timeMs: 42800,
+        context: "time_trial",
+        notes: "Great whip kick improvement!",
+      },
+    ],
     goals: [
       {
-        title: "Learn Legal Butterfly",
-        description: "Start from basics: dolphin kick and single-arm drills.",
-        target: "Complete 25m butterfly with legal form",
-        progress: 20,
+        title: "90% Practice Consistency",
+        description: "Maintain regular attendance to build stamina.",
+        type: "attendance",
+        targetAttendancePct: 90,
+        progress: 75,
         status: "in_progress",
-        targetDateDaysAhead: 90,
-        updatedDaysAgo: 5,
+        targetDateDaysAhead: 60,
+        updatedDaysAgo: 1,
       },
     ],
   },
@@ -339,13 +486,6 @@ function dateStringFromOffset(daysOffset: number): string {
  * (run seed:resetDemo first to replace them). Other students and the
  * coach login are left untouched.
  * Run with: npx convex run seed:seed
- *
- * Relations guaranteed by the data below (and enforced in
- * addStudentData):
- * - every training session is on a day with present/late attendance
- * - every skill referenced exists in the skills catalog
- * - skill progress = starting level + 5 per session practicing it
- * - completed goals have 100% progress and a past target date
  */
 export const seed = action({
   args: {},
@@ -425,9 +565,25 @@ export const seed = action({
               ]
             : [],
         ),
+        times: demo.times.map((time) => ({
+          date: dateStringFromOffset(time.daysAgo),
+          stroke: time.stroke,
+          distanceMeters: time.distanceMeters,
+          course: time.course,
+          timeMs: time.timeMs,
+          context: time.context,
+          notes: time.notes,
+        })),
         goals: demo.goals.map((goal) => ({
           title: goal.title,
           description: goal.description,
+          type: goal.type ?? "manual",
+          stroke: goal.stroke,
+          distanceMeters: goal.distanceMeters,
+          course: goal.course,
+          targetTimeMs: goal.targetTimeMs,
+          baselineBestMs: goal.baselineBestMs,
+          targetAttendancePct: goal.targetAttendancePct,
           target: goal.target,
           progress: goal.progress,
           status: goal.status,
@@ -556,7 +712,7 @@ export const findUserIdByEmail = internalQuery({
 
 /**
  * Removes ONLY the hardcoded @demo.swim accounts (their student
- * profile, attendance, skills, sessions, goals, and auth records).
+ * profile, attendance, skills, sessions, goals, times, and auth records).
  * Coach logins and manually created students are untouched.
  * Run with: npx convex run seed:resetDemo
  */
@@ -619,6 +775,13 @@ async function deleteStudentData(ctx: MutationCtx, studentId: Id<"students">) {
     .take(1000);
   for (const doc of goals) {
     await ctx.db.delete("trainingGoals", doc._id);
+  }
+  const times = await ctx.db
+    .query("timeResults")
+    .withIndex("by_student_and_date", (q) => q.eq("studentId", studentId))
+    .take(1000);
+  for (const doc of times) {
+    await ctx.db.delete("timeResults", doc._id);
   }
 }
 
@@ -699,7 +862,8 @@ export const deleteDemoGroupsAndPractices = internalMutation({
   },
 });
 
-export const addStudentData = internalMutation({  args: {
+export const addStudentData = internalMutation({
+  args: {
     studentId: v.id("students"),
     skills: v.array(
       v.object({ key: v.string(), progress: v.number() }),
@@ -723,16 +887,45 @@ export const addStudentData = internalMutation({  args: {
         notes: v.string(),
       }),
     ),
+    times: v.array(
+      v.object({
+        date: v.string(),
+        stroke: v.string(),
+        distanceMeters: v.number(),
+        course: v.union(v.literal("short"), v.literal("long")),
+        timeMs: v.number(),
+        context: v.union(
+          v.literal("practice"),
+          v.literal("time_trial"),
+          v.literal("meet"),
+        ),
+        notes: v.optional(v.string()),
+      }),
+    ),
     goals: v.array(
       v.object({
         title: v.string(),
         description: v.string(),
-        target: v.string(),
+        type: v.optional(
+          v.union(
+            v.literal("manual"),
+            v.literal("time"),
+            v.literal("attendance"),
+          ),
+        ),
+        stroke: v.optional(v.string()),
+        distanceMeters: v.optional(v.number()),
+        course: v.optional(v.union(v.literal("short"), v.literal("long"))),
+        targetTimeMs: v.optional(v.number()),
+        baselineBestMs: v.optional(v.number()),
+        targetAttendancePct: v.optional(v.number()),
+        target: v.optional(v.string()),
         progress: v.number(),
         status: v.union(
           v.literal("not_started"),
           v.literal("in_progress"),
           v.literal("completed"),
+          v.literal("archived"),
         ),
         targetDate: v.string(),
         updatedDaysAgo: v.number(),
@@ -806,11 +999,31 @@ export const addStudentData = internalMutation({  args: {
         updatedAt: endOfDay(session.date),
       });
     }
+    for (const time of args.times) {
+      await ctx.db.insert("timeResults", {
+        studentId: args.studentId,
+        date: time.date,
+        stroke: time.stroke,
+        distanceMeters: time.distanceMeters,
+        course: time.course,
+        timeMs: time.timeMs,
+        context: time.context,
+        notes: time.notes,
+        updatedAt: endOfDay(time.date),
+      });
+    }
     for (const goal of args.goals) {
       await ctx.db.insert("trainingGoals", {
         studentId: args.studentId,
         title: goal.title,
         description: goal.description,
+        type: goal.type ?? "manual",
+        stroke: goal.stroke,
+        distanceMeters: goal.distanceMeters,
+        course: goal.course,
+        targetTimeMs: goal.targetTimeMs,
+        baselineBestMs: goal.baselineBestMs,
+        targetAttendancePct: goal.targetAttendancePct,
         target: goal.target,
         progress: goal.progress,
         status: goal.status,

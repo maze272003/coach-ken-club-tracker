@@ -1,4 +1,5 @@
-import { CheckCircle2, ClipboardCheck, Sparkles, Target, Timer } from "lucide-react";
+import { CheckCircle2, ClipboardCheck, Target, Timer } from "lucide-react";
+
 import {
   Card,
   CardContent,
