@@ -107,3 +107,155 @@ export async function commitmentStats(
     percentage: held === 0 ? null : Math.round((attended / held) * 100),
   };
 }
+
+/**
+ * Dynamically derives goal progress for time, attendance, and manual goals.
+ */
+export async function deriveGoalProgress(
+  ctx: QueryCtx,
+  goal: {
+    studentId: Id<"students">;
+    type?: "manual" | "time" | "attendance";
+    distanceMeters?: number;
+    stroke?: string;
+    course?: "short" | "long";
+    targetTimeMs?: number;
+    baselineBestMs?: number;
+    targetAttendancePct?: number;
+    progress: number;
+    status: "not_started" | "in_progress" | "completed" | "archived";
+    targetDate?: string;
+  },
+): Promise<{
+  progress: number;
+  status: "not_started" | "in_progress" | "completed" | "archived";
+  currentBestMs: number | null;
+  currentAttendancePct: number | null;
+}> {
+  if (goal.status === "archived") {
+    return {
+      progress: goal.progress,
+      status: "archived",
+      currentBestMs: null,
+      currentAttendancePct: null,
+    };
+  }
+
+  const type = goal.type ?? "manual";
+
+  if (type === "time") {
+    if (
+      !goal.stroke ||
+      !goal.distanceMeters ||
+      !goal.course ||
+      !goal.targetTimeMs
+    ) {
+      return {
+        progress: goal.progress,
+        status: goal.status,
+        currentBestMs: null,
+        currentAttendancePct: null,
+      };
+    }
+
+    const times = await ctx.db
+      .query("timeResults")
+      .withIndex("by_student_and_event", (q) =>
+        q
+          .eq("studentId", goal.studentId)
+          .eq("stroke", goal.stroke!)
+          .eq("distanceMeters", goal.distanceMeters!)
+          .eq("course", goal.course!),
+      )
+      .take(500);
+
+    if (times.length === 0) {
+      return {
+        progress: 0,
+        status: "in_progress",
+        currentBestMs: null,
+        currentAttendancePct: null,
+      };
+    }
+
+    const currentBestMs = Math.min(...times.map((t) => t.timeMs));
+    if (currentBestMs <= goal.targetTimeMs) {
+      return {
+        progress: 100,
+        status: "completed",
+        currentBestMs,
+        currentAttendancePct: null,
+      };
+    }
+
+    const baseline = goal.baselineBestMs ?? currentBestMs;
+    if (baseline <= goal.targetTimeMs) {
+      return {
+        progress: 100,
+        status: "completed",
+        currentBestMs,
+        currentAttendancePct: null,
+      };
+    }
+
+    const rawPct =
+      ((baseline - currentBestMs) / (baseline - goal.targetTimeMs)) * 100;
+    const progress = Math.min(100, Math.max(0, Math.round(rawPct)));
+    return {
+      progress,
+      status: progress >= 100 ? "completed" : "in_progress",
+      currentBestMs,
+      currentAttendancePct: null,
+    };
+  }
+
+  if (type === "attendance") {
+    if (!goal.targetAttendancePct) {
+      return {
+        progress: goal.progress,
+        status: goal.status,
+        currentBestMs: null,
+        currentAttendancePct: null,
+      };
+    }
+
+    const stats = await attendanceStats(ctx, goal.studentId);
+    if (stats.percentage === null) {
+      return {
+        progress: 0,
+        status: "in_progress",
+        currentBestMs: null,
+        currentAttendancePct: null,
+      };
+    }
+
+    const currentAttendancePct = stats.percentage;
+    if (currentAttendancePct >= goal.targetAttendancePct) {
+      return {
+        progress: 100,
+        status: "completed",
+        currentBestMs: null,
+        currentAttendancePct,
+      };
+    }
+
+    const rawPct = (currentAttendancePct / goal.targetAttendancePct) * 100;
+    const progress = Math.min(100, Math.max(0, Math.round(rawPct)));
+    return {
+      progress,
+      status: progress >= 100 ? "completed" : "in_progress",
+      currentBestMs: null,
+      currentAttendancePct,
+    };
+  }
+
+
+  // Manual goal
+  return {
+    progress: goal.progress,
+    status: goal.progress >= 100 ? "completed" : goal.status,
+    currentBestMs: null,
+    currentAttendancePct: null,
+  };
+}
+

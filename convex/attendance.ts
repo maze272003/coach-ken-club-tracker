@@ -4,6 +4,8 @@ import { mutation, query } from "./_generated/server";
 import { requireCoach, requireStudent, resolveStudentAccess } from "./lib/access";
 import { attendanceStats } from "./lib/stats";
 import { assertDateString, assertMonthString } from "./lib/validation";
+import { checkAndAutoCompleteGoals } from "./goals";
+
 
 const NOT_AUTHORIZED = "Not authorized";
 
@@ -60,9 +62,11 @@ export const record = mutation({
         updatedAt: Date.now(),
       });
     }
+    await checkAndAutoCompleteGoals(ctx, args.studentId);
     return null;
   },
 });
+
 
 /**
  * Coach-only: record or update roll call for many students on one
@@ -118,10 +122,12 @@ export const recordBulk = mutation({
         });
       }
       recorded += 1;
+      await checkAndAutoCompleteGoals(ctx, studentId);
     }
     return { recorded };
   },
 });
+
 
 /**
  * Coach or owning student: attendance history plus derived stats.

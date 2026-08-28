@@ -11,6 +11,8 @@ import {
   assertTimeMs,
 } from "./lib/validation";
 import { formatTimeMs } from "../lib/format";
+import { checkAndAutoCompleteGoals } from "./goals";
+
 
 const NOT_AUTHORIZED = "Not authorized";
 
@@ -148,6 +150,8 @@ export const create = mutation({
       updatedAt: Date.now(),
     });
 
+    await checkAndAutoCompleteGoals(ctx, args.studentId);
+
     return {
       timeResultId,
       isNewPersonalBest,
@@ -157,6 +161,7 @@ export const create = mutation({
     };
   },
 });
+
 
 /**
  * Coach-only: atomically record swim times for an entire group in a time trial.
@@ -272,7 +277,10 @@ export const recordBulk = mutation({
 
       recordedCount += 1;
 
+      await checkAndAutoCompleteGoals(ctx, entry.studentId);
+
       if (isNewPB) {
+
         newPersonalBests.push({
           studentId: entry.studentId,
           studentName,
