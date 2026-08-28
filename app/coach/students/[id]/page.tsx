@@ -24,7 +24,9 @@ import { AttendanceForm } from "@/components/coach/attendance-form";
 import { SkillsEditor } from "@/components/coach/skills-editor";
 import { SessionFormDialog } from "@/components/coach/session-form-dialog";
 import { GoalFormDialog } from "@/components/coach/goal-form-dialog";
+import { StudentTimesTab } from "@/components/coach/student-times-tab";
 import {
+
   EditStudentDialog,
   ResetPasswordDialog,
 } from "@/components/coach/edit-student-dialog";
@@ -226,10 +228,12 @@ export default function CoachStudentDetailPage() {
       <Tabs defaultValue="attendance">
         <TabsList className="flex flex-wrap">
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
+          <TabsTrigger value="times">Times & PBs</TabsTrigger>
           <TabsTrigger value="skills">Skills</TabsTrigger>
           <TabsTrigger value="training">Training</TabsTrigger>
           <TabsTrigger value="goals">Goals</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="attendance" className="mt-4 space-y-4">
           <AttendanceForm studentId={student.studentId} />
@@ -271,7 +275,15 @@ export default function CoachStudentDetailPage() {
           )}
         </TabsContent>
 
+        <TabsContent value="times" className="mt-4">
+          <StudentTimesTab
+            studentId={student.studentId}
+            studentName={student.name}
+          />
+        </TabsContent>
+
         <TabsContent value="skills" className="mt-4">
+
           <SkillsEditor key={student.studentId} studentId={student.studentId} />
         </TabsContent>
 

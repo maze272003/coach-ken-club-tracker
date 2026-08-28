@@ -232,7 +232,7 @@ export default function CoachTimesPage() {
 
       sessionStorage.removeItem(draftKey);
       setEntries({});
-      setDraftRestored(false);
+
 
       if (res.newPersonalBests.length > 0) {
         setCelebrationPBs(res.newPersonalBests);

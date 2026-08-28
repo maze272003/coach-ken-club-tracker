@@ -42,10 +42,12 @@ const timeResultRecord = v.object({
   timeMs: v.number(),
   formattedTime: v.string(),
   context: contextValidator,
+  event: v.string(),
   notes: v.union(v.string(), v.null()),
   isPersonalBest: v.boolean(),
   updatedAt: v.number(),
 });
+
 
 const personalBestItem = v.object({
   stroke: v.string(),
@@ -325,6 +327,7 @@ export const listForStudent = query({
     stroke: v.optional(v.string()),
     distanceMeters: v.optional(v.number()),
     course: v.optional(courseValidator),
+    context: v.optional(contextValidator),
   },
   returns: v.array(timeResultRecord),
   handler: async (ctx, args) => {
@@ -352,7 +355,11 @@ export const listForStudent = query({
         .withIndex("by_student_and_date", (q) => q.eq("studentId", studentId));
     }
 
-    const allTimes = await timesQuery.order("desc").take(1000);
+    let allTimes = await timesQuery.order("desc").take(1000);
+
+    if (args.context !== undefined) {
+      allTimes = allTimes.filter((t) => t.context === args.context);
+    }
 
     // Calculate best time per event to mark PB flag
     const bestByEvent = new Map<string, number>();
@@ -377,6 +384,7 @@ export const listForStudent = query({
         timeMs: t.timeMs,
         formattedTime: formatTimeMs(t.timeMs),
         context: t.context,
+        event: formatEventName(t.distanceMeters, t.stroke, t.course),
         notes: t.notes ?? null,
         isPersonalBest: best !== undefined && t.timeMs === best,
         updatedAt: t.updatedAt,
@@ -384,6 +392,7 @@ export const listForStudent = query({
     });
   },
 });
+
 
 /**
  * Coach or owning student: summary of Personal Bests across all events.
