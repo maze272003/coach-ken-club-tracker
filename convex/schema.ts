@@ -103,18 +103,53 @@ export default defineSchema({
     progress: v.number(),
     updatedAt: v.number(),
   }).index("by_student_and_stroke", ["studentId", "stroke"]),
+  timeResults: defineTable({
+    studentId: v.id("students"),
+    date: v.string(),
+    distanceMeters: v.number(),
+    stroke: v.string(),
+    course: v.union(v.literal("short"), v.literal("long")),
+    timeMs: v.number(),
+    context: v.union(
+      v.literal("practice"),
+      v.literal("time_trial"),
+      v.literal("meet"),
+    ),
+    notes: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_student_and_event", [
+      "studentId",
+      "stroke",
+      "distanceMeters",
+      "course",
+    ])
+    .index("by_student_and_date", ["studentId", "date"])
+    .index("by_date", ["date"])
+    .index("by_event", ["stroke", "distanceMeters", "course"]),
   trainingGoals: defineTable({
     studentId: v.id("students"),
     title: v.string(),
     description: v.optional(v.string()),
+    type: v.optional(
+      v.union(v.literal("manual"), v.literal("time"), v.literal("attendance")),
+    ),
+    distanceMeters: v.optional(v.number()),
+    stroke: v.optional(v.string()),
+    course: v.optional(v.union(v.literal("short"), v.literal("long"))),
+    targetTimeMs: v.optional(v.number()),
+    baselineBestMs: v.optional(v.number()),
+    targetAttendancePct: v.optional(v.number()),
     target: v.optional(v.string()),
     progress: v.number(),
     status: v.union(
       v.literal("not_started"),
       v.literal("in_progress"),
       v.literal("completed"),
+      v.literal("archived"),
     ),
     targetDate: v.optional(v.string()),
     updatedAt: v.number(),
   }).index("by_student_and_updated", ["studentId", "updatedAt"]),
 });
+

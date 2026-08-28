@@ -213,7 +213,9 @@ export const studentDashboard = query({
           v.literal("not_started"),
           v.literal("in_progress"),
           v.literal("completed"),
+          v.literal("archived"),
         ),
+
         targetDate: v.union(v.string(), v.null()),
       }),
     ),

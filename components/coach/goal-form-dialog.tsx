@@ -39,7 +39,7 @@ const goalSchema = z.object({
     .int("Progress must be a whole number")
     .min(0, "Progress must be between 0 and 100")
     .max(100, "Progress must be between 0 and 100"),
-  status: z.enum(["not_started", "in_progress", "completed"]),
+  status: z.enum(["not_started", "in_progress", "completed", "archived"]),
   targetDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a valid date")
@@ -50,6 +50,7 @@ const statusOptions = [
   { value: "not_started", label: "Not Started" },
   { value: "in_progress", label: "In Progress" },
   { value: "completed", label: "Completed" },
+  { value: "archived", label: "Archived" },
 ] as const;
 
 export type GoalFormValues = {
@@ -58,9 +59,10 @@ export type GoalFormValues = {
   description: string;
   target: string;
   progress: string;
-  status: "not_started" | "in_progress" | "completed";
+  status: "not_started" | "in_progress" | "completed" | "archived";
   targetDate: string;
 };
+
 
 export function GoalFormDialog({
   fixedStudentId,

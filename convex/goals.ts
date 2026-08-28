@@ -10,7 +10,9 @@ const goalStatusValidator = v.union(
   v.literal("not_started"),
   v.literal("in_progress"),
   v.literal("completed"),
+  v.literal("archived"),
 );
+
 
 const goalFields = {
   title: v.string(),

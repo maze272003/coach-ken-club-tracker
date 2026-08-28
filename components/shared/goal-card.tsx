@@ -10,7 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { formatDate } from "@/lib/format";
 
-export type GoalStatus = "not_started" | "in_progress" | "completed";
+export type GoalStatus =
+  | "not_started"
+  | "in_progress"
+  | "completed"
+  | "archived";
 
 export type GoalRecord = {
   _id: string;
@@ -26,7 +30,9 @@ const statusLabels: Record<GoalStatus, string> = {
   not_started: "Not Started",
   in_progress: "In Progress",
   completed: "Completed",
+  archived: "Archived",
 };
+
 
 export function GoalCard({
   goal,
