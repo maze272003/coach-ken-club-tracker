@@ -17,6 +17,7 @@ import type * as http from "../http.js";
 import type * as lib_access from "../lib/access.js";
 import type * as lib_stats from "../lib/stats.js";
 import type * as lib_validation from "../lib/validation.js";
+import type * as practices from "../practices.js";
 import type * as seed from "../seed.js";
 import type * as skills from "../skills.js";
 import type * as students from "../students.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   "lib/access": typeof lib_access;
   "lib/stats": typeof lib_stats;
   "lib/validation": typeof lib_validation;
+  practices: typeof practices;
   seed: typeof seed;
   skills: typeof skills;
   students: typeof students;

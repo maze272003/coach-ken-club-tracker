@@ -99,6 +99,23 @@ export function normalizeGroupName(value: string): string {
   return name;
 }
 
+const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/**
+ * Times of day are stored as 24-hour "HH:MM" strings.
+ */
+export function assertTimeString(value: string): void {
+  if (!TIME_REGEX.test(value)) {
+    throw new ConvexError("Invalid time: expected HH:MM (24-hour)");
+  }
+}
+
+export function assertDistanceMeters(value: number): void {
+  if (!Number.isInteger(value) || value <= 0 || value > 30000) {
+    throw new ConvexError("Distance must be between 1 and 30000 meters");
+  }
+}
+
 const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
 
 /**

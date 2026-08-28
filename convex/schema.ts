@@ -58,16 +58,44 @@ export default defineSchema({
   })
     .index("by_student_and_date", ["studentId", "date"])
     .index("by_date", ["date"]),
+  practices: defineTable({
+    groupId: v.id("groups"),
+    date: v.string(),
+    startTime: v.optional(v.string()),
+    title: v.string(),
+    plannedDurationMinutes: v.number(),
+    plannedDistanceMeters: v.optional(v.number()),
+    strokes: v.array(v.string()),
+    notes: v.optional(v.string()),
+    status: v.union(
+      v.literal("planned"),
+      v.literal("completed"),
+      v.literal("cancelled"),
+    ),
+    completedAt: v.optional(v.number()),
+    actualDurationMinutes: v.optional(v.number()),
+    actualDistanceMeters: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index("by_group_and_date", ["groupId", "date"])
+    .index("by_date", ["date"])
+    .index("by_status", ["status"]),
   trainingSessions: defineTable({
     studentId: v.id("students"),
+    practiceId: v.optional(v.id("practices")),
     date: v.string(),
     title: v.string(),
     durationMinutes: v.number(),
+    distanceMeters: v.optional(v.number()),
+    intensity: v.optional(
+      v.union(v.literal("easy"), v.literal("moderate"), v.literal("hard")),
+    ),
     strokes: v.array(v.string()),
     notes: v.optional(v.string()),
     updatedAt: v.number(),
   })
     .index("by_student_and_date", ["studentId", "date"])
+    .index("by_student_and_practice", ["studentId", "practiceId"])
     .index("by_date", ["date"]),
   strokeSkills: defineTable({
     studentId: v.id("students"),
