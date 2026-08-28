@@ -90,3 +90,11 @@ export function slugifySkillName(value: string): string {
   }
   return slug;
 }
+
+export function normalizeGroupName(value: string): string {
+  const name = value.trim().replace(/\s+/g, " ");
+  if (name.length === 0 || name.length > 80) {
+    throw new ConvexError("Group name must be between 1 and 80 characters");
+  }
+  return name;
+}

@@ -36,6 +36,8 @@ const studentSummary = v.object({
   email: v.string(),
   image: v.union(v.string(), v.null()),
   status: v.union(v.literal("active"), v.literal("inactive")),
+  groupId: v.union(v.id("groups"), v.null()),
+  groupName: v.union(v.string(), v.null()),
   attendancePercentage: v.union(v.number(), v.null()),
   overallProgress: v.union(v.number(), v.null()),
   currentGoalTitle: v.union(v.string(), v.null()),
@@ -46,16 +48,32 @@ const studentSummary = v.object({
  * filtered by a name/email search string.
  */
 export const list = query({
-  args: { search: v.optional(v.string()) },
+  args: {
+    search: v.optional(v.string()),
+    groupId: v.optional(v.union(v.id("groups"), v.null())),
+  },
   returns: v.array(studentSummary),
   handler: async (ctx, args) => {
     const coach = await requireCoach(ctx);
     if (!coach) throw new ConvexError(NOT_AUTHORIZED);
 
+    const groups = await ctx.db
+      .query("groups")
+      .withIndex("by_status")
+      .take(500);
+    const groupNameById = new Map(groups.map((g) => [g._id, g.name]));
+
     const search = args.search?.trim().toLowerCase() ?? "";
     const students = await ctx.db.query("students").take(500);
     const rows = await Promise.all(
       students.map(async (student) => {
+        if (args.groupId !== undefined) {
+          if (args.groupId === null) {
+            if (student.groupId !== undefined) return null;
+          } else if (student.groupId !== args.groupId) {
+            return null;
+          }
+        }
         const user = await ctx.db.get("users", student.userId);
         if (!user) return null;
         const name = user.name ?? "";
@@ -85,6 +103,10 @@ export const list = query({
           email,
           image: user.image ?? null,
           status: student.status,
+          groupId: student.groupId ?? null,
+          groupName: student.groupId
+            ? (groupNameById.get(student.groupId) ?? null)
+            : null,
           attendancePercentage: attendance.percentage,
           overallProgress: progress,
           currentGoalTitle: goal[0]?.title ?? null,
