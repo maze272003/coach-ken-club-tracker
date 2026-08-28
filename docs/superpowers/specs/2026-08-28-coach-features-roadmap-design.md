@@ -1,7 +1,8 @@
 # CoachKen Tracker — Coach Features Roadmap (Design)
 
 Date: 2026-08-28
-Status: Approved (pending spec review)
+Revision: 2 (2026-08-28 — professional coaching gap-analysis review)
+Status: Approved
 Owner: CoachKen Tracker
 
 ## 1. Purpose
@@ -15,16 +16,29 @@ Three goals, in order:
 
 ## 2. Current State
 
-Tables: `users` (coach/student roles), `skills` (catalog), `students`,
-`attendance` (per student/date), `trainingSessions` (per student: date,
-title, durationMinutes, strokes[], notes), `strokeSkills` (progress %),
-`trainingGoals` (manual progress %, free-text target).
+Tables: `users` (coach/student roles), `skills` (catalog), `groups`,
+`students` (with profile fields: dateOfBirth, sex, parent contact,
+joinedAt, medicalNotes, groupId), `attendance` (per student/date),
+`practices` (planned/completed/cancelled group sessions),
+`trainingSessions` (per student: date, durationMinutes,
+distanceMeters, intensity, strokes[], practiceId, notes),
+`strokeSkills` (progress %), `trainingGoals` (manual progress %,
+free-text target).
 
-Confirmed gaps: no swimmer profile data, no groups, no planned practices
-(sessions are logged after the fact, one swimmer at a time), no
-distance/intensity, no race times or PBs, no trends/charts, no computed
-insights, no reports, no notifications. Goal progress is manual and
-attendance % only counts recorded days.
+**Implementation status (Rev 2):** M1 Groups and M2 Profiles are
+shipped. M3 is partial — `practices.create/update/cancel/listForGroup/
+listUpcoming` are live, but the `complete` fan-out mutation is not
+implemented (a TDD red-phase test, `convex/practices-complete.test.ts`,
+is staged and awaiting implementation). M4 `recordBulk` is not started.
+M5–S6 and the P2/P3 items remain design-only.
+
+Confirmed remaining gaps: no practice completion fan-out or bulk roll
+call (sessions are still logged one swimmer at a time), no race times
+or PBs, no trends/charts, no computed insights, no reports, no
+notifications. Goal progress is manual and attendance % only counts
+recorded days — a swimmer who stops showing up without records being
+taken looks unchanged. `strokeSkills` stores a single mutable number
+per stroke, so each update destroys assessment history.
 
 ## 3. Coach Workflow Requirements
 
@@ -41,7 +55,7 @@ attendance % only counts recorded days.
 Priorities: P0 = must have, P1 = should have, P2 = nice to have,
 P3 = future.
 
-### M1. Training Groups — P0
+### M1. Training Groups — P0 (shipped)
 
 **Why:** every team-level feature (roll call, planning, rankings) needs a
 group dimension. Built first; blocks M2–M4, M8, S2–S4.
@@ -66,7 +80,7 @@ student-access queries.
 count). Group filter tabs on coach students/attendance/training pages.
 Group shown in student detail header.
 
-### M2. Swimmer Profiles — P0
+### M2. Swimmer Profiles — P0 (shipped)
 
 **Why:** age-appropriate training, safe contact of minors, and season
 context all require real athlete attributes.
@@ -92,7 +106,7 @@ context all require real athlete attributes.
 date, parent contact) and an edit form. Student profile page shows own
 profile without medical notes.
 
-### M3. Practice Plans → Completed Sessions — P0
+### M3. Practice Plans → Completed Sessions — P0 (partial: planning shipped; `complete` fan-out pending)
 
 **Why:** one planned group practice replaces N per-swimmer session entries;
 planned vs. actual attendance finally gives attendance % a true denominator.
@@ -138,7 +152,7 @@ days), create/edit form (group, date, plan), actions per practice: Mark
 Completed (prompt actual duration/distance), Cancel. Coach dashboard shows
 today's practices with one-click actions.
 
-### M4. Bulk Roll Call — P0
+### M4. Bulk Roll Call — P0 (pending)
 
 **Why:** attendance is the app's highest-frequency action; it must be one
 screen and one save.
@@ -278,6 +292,11 @@ achieved, new flags — and writes a `reports` document
 `by_week_start`). Coach dashboard shows the latest report; report page
 allows print/export (browser print). No email in v1.
 
+**Rev 2 extension — athlete report card:** the same report machinery also
+renders a per-swimmer printable card (attendance + commitment %, volume
+trend, skill levels, PB list with dates, goal status) for parent meetings
+and athlete reviews.
+
 ### S3. Coach Dashboard v2 — P1
 
 Restructure `app/coach/dashboard`: (top) today's practices with one-click
@@ -286,6 +305,11 @@ trend arrows (attendance Δ vs. last month, weekly volume Δ vs. prior week,
 PBs this month, active swimmers); (side) upcoming goal deadlines and next
 practices. Replaces the current stats + activity feed layout; recent
 activity feed moves below.
+
+Scope note (Rev 2): the minimal "today's practices with one-click roll
+call / complete" strip is P0 and ships with M3/M4 — S3 is the fuller
+restructure around it. `coachOverview`'s 10000-row session scan is
+replaced by an indexed count here.
 
 ### S4. Rankings / Leaderboard — P1
 
@@ -318,6 +342,27 @@ Season & meet calendar with meet entries/results (N1); parent attendance
 emails (N2); standardized test sets with tracked benchmarks (N3);
 injury/illness log with return-to-training notes (N4); announcements board
 per group (N5); dryland/strength log separate from water volume (N6).
+
+Rev 2 additions from the gap analysis:
+
+- **N7. Skill assessment history** — `strokeSkills` overwrites itself, so
+  progress has no trajectory or evidence. New append-only `skillAssessments`
+  table (`studentId`, `skillKey`, `level`, `date`, `note`; index
+  `(studentId, skillKey, date)`); `strokeSkills` stays as the derived
+  current-level cache. Unlocks skill-trend charts and honest "what changed
+  and when" reviews.
+- **N8. Seasons** — named date ranges (e.g. "2026–27 Short Course") that
+  scope season-bests (S4), reports (S2), and rosters. Defaults to calendar
+  year until a season is created; needed before rankings mean anything
+  across mid-year boundaries.
+- **N9. Attendance context** — optional `reason`/excused flag on
+  `attendance` (exam vs. skipped are different coaching problems) and
+  optional `attendance.practiceId` to tie records to the practice that
+  spawned them, making commitment denominators exact instead of
+  date-inferred.
+- **N10. Group-scoped goals** — `scope` field on goals (individual vs.
+  group) so relay/team standards have a home; same derived-progress engine
+  as M6.
 
 ### P3 — Future / Advanced
 
@@ -367,6 +412,12 @@ Phase 3 (intelligence): M8 Flags → S1 Charts → S2 Weekly Report → S3 Dashb
 Phase 4 (engagement):  S4 Rankings → S5 Student v2 → S6 Notifications
 ```
 
+**Rev 2 status:** Phase 1 is mid-flight — M1/M2 shipped, M3 planning
+shipped, M3 `complete` fan-out has a staged red test, M4 not started.
+The immediate next work is finishing Phase 1 per the existing plan
+(`docs/superpowers/plans/2026-08-28-phase1-groups-profiles-practices-rollcall.md`)
+before opening Phase 2.
+
 Hard dependencies: M3 needs M1. M4's practice shortcut needs M3. M6 needs
 M5. M8 needs M3/M5/M6 data. S2/S6 need M8 rules. S1 needs M3/M7.
 Each phase ships independently usable value; each gets its own
@@ -377,3 +428,30 @@ implementation plan, starting with Phase 1.
 Email/SMS delivery, video upload, meet results import formats, multi-coach
 permissions, billing, mobile-native apps. All deferred to P2/P3 or later
 roadmaps.
+
+## 8. Revision History
+
+**Rev 2 — 2026-08-28 (professional coaching gap-analysis review)**
+
+Full-codebase re-review (schema, all Convex modules, UI surface, git
+history) confirmed the roadmap direction and produced these changes:
+
+- **Current State rewritten** with implementation status: M1/M2 shipped;
+  M3 partial (`complete` fan-out missing, red test
+  `convex/practices-complete.test.ts` staged); M4 `recordBulk` missing.
+- **Priority corrections:** commitment % (M3) confirmed P0 — it fixes the
+  "silent dropout" flaw where attendance % only counts recorded days. The
+  dashboard "today strip" with roll-call/complete shortcuts is P0 scope of
+  M3/M4; only the fuller Dashboard v2 restructure is P1 (S3) — this split
+  was ambiguous in Rev 1.
+- **New P2 items (N7–N10):** skill assessment history (append-only
+  `skillAssessments` — `strokeSkills` currently destroys history on every
+  update), seasons entity, attendance reasons/excused flag +
+  `attendance.practiceId` link, group-scoped goals.
+- **S2 extended** with the printable athlete report card (parent-meeting
+  ready).
+- **Build order annotated** with Phase 1 mid-flight status; next action is
+  executing the remaining tasks of the existing Phase 1 plan.
+
+No changes to the security model, migration strategy, or M5–M8/S1/S6
+designs — the review validated them as specified.
