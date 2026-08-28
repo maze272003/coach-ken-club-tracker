@@ -98,3 +98,21 @@ export function normalizeGroupName(value: string): string {
   }
   return name;
 }
+
+const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
+
+/**
+ * Date of birth must be a real calendar date between 3 and 100 years
+ * in the past. Uses the wall clock — call from mutations only.
+ */
+export function assertDateOfBirth(value: string): void {
+  assertDateString(value);
+  const ms = Date.parse(`${value}T00:00:00Z`);
+  const ageMs = Date.now() - ms;
+  if (ageMs < 3 * YEAR_MS) {
+    throw new ConvexError("Date of birth must be at least 3 years in the past");
+  }
+  if (ageMs > 100 * YEAR_MS) {
+    throw new ConvexError("Date of birth must be within the last 100 years");
+  }
+}

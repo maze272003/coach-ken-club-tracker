@@ -35,6 +35,13 @@ export default defineSchema({
     userId: v.id("users"),
     groupId: v.optional(v.id("groups")),
     status: v.union(v.literal("active"), v.literal("inactive")),
+    dateOfBirth: v.optional(v.string()),
+    sex: v.optional(v.union(v.literal("M"), v.literal("F"))),
+    parentName: v.optional(v.string()),
+    parentPhone: v.optional(v.string()),
+    parentEmail: v.optional(v.string()),
+    joinedAt: v.optional(v.string()),
+    medicalNotes: v.optional(v.string()),
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])

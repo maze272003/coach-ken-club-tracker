@@ -17,6 +17,8 @@ import type { Id } from "./_generated/dataModel";
 import { requireCoach, requireStudent } from "./lib/access";
 import { attendanceStats, overallProgress } from "./lib/stats";
 import {
+  assertDateOfBirth,
+  assertDateString,
   assertPassword,
   normalizeEmail,
   normalizeName,
@@ -42,6 +44,82 @@ const studentSummary = v.object({
   overallProgress: v.union(v.number(), v.null()),
   currentGoalTitle: v.union(v.string(), v.null()),
 });
+
+const profileFieldsArgs = {
+  dateOfBirth: v.optional(v.string()),
+  sex: v.optional(v.union(v.literal("M"), v.literal("F"))),
+  parentName: v.optional(v.string()),
+  parentPhone: v.optional(v.string()),
+  parentEmail: v.optional(v.string()),
+  joinedAt: v.optional(v.string()),
+  medicalNotes: v.optional(v.string()),
+};
+
+const profileFieldsRecord = {
+  dateOfBirth: v.union(v.string(), v.null()),
+  sex: v.union(v.literal("M"), v.literal("F"), v.null()),
+  parentName: v.union(v.string(), v.null()),
+  parentPhone: v.union(v.string(), v.null()),
+  parentEmail: v.union(v.string(), v.null()),
+  joinedAt: v.union(v.string(), v.null()),
+};
+
+type ProfilePatch = {
+  dateOfBirth?: string;
+  sex?: "M" | "F";
+  parentName?: string;
+  parentPhone?: string;
+  parentEmail?: string;
+  joinedAt?: string;
+  medicalNotes?: string;
+};
+
+function validateProfileFields(args: {
+  dateOfBirth?: string;
+  sex?: "M" | "F";
+  parentName?: string;
+  parentPhone?: string;
+  parentEmail?: string;
+  joinedAt?: string;
+  medicalNotes?: string;
+}): ProfilePatch {
+  const fields: ProfilePatch = {};
+  if (args.dateOfBirth !== undefined) {
+    assertDateOfBirth(args.dateOfBirth);
+    fields.dateOfBirth = args.dateOfBirth;
+  }
+  if (args.sex !== undefined) fields.sex = args.sex;
+  if (args.parentName !== undefined) {
+    const value = args.parentName.trim();
+    if (value.length > 100) {
+      throw new ConvexError("Parent name must be at most 100 characters");
+    }
+    if (value) fields.parentName = value;
+  }
+  if (args.parentPhone !== undefined) {
+    const value = args.parentPhone.trim();
+    if (value.length > 30) {
+      throw new ConvexError("Parent phone must be at most 30 characters");
+    }
+    if (value) fields.parentPhone = value;
+  }
+  if (args.parentEmail !== undefined) {
+    const value = args.parentEmail.trim();
+    if (value) fields.parentEmail = normalizeEmail(value);
+  }
+  if (args.joinedAt !== undefined) {
+    assertDateString(args.joinedAt);
+    fields.joinedAt = args.joinedAt;
+  }
+  if (args.medicalNotes !== undefined) {
+    const value = args.medicalNotes.trim();
+    if (value.length > 2000) {
+      throw new ConvexError("Medical notes must be at most 2000 characters");
+    }
+    if (value) fields.medicalNotes = value;
+  }
+  return fields;
+}
 
 /**
  * Coach-only: list students with derived progress stats, optionally
@@ -131,7 +209,11 @@ export const get = query({
       email: v.string(),
       image: v.union(v.string(), v.null()),
       status: v.union(v.literal("active"), v.literal("inactive")),
+      groupId: v.union(v.id("groups"), v.null()),
+      groupName: v.union(v.string(), v.null()),
+      medicalNotes: v.union(v.string(), v.null()),
       createdAtMs: v.number(),
+      ...profileFieldsRecord,
     }),
   ),
   handler: async (ctx, args) => {
@@ -141,6 +223,9 @@ export const get = query({
     if (!student) return null;
     const user = await ctx.db.get("users", student.userId);
     if (!user) return null;
+    const group = student.groupId
+      ? await ctx.db.get("groups", student.groupId)
+      : null;
     return {
       studentId: student._id,
       userId: user._id,
@@ -148,7 +233,16 @@ export const get = query({
       email: user.email ?? "",
       image: user.image ?? null,
       status: student.status,
+      groupId: student.groupId ?? null,
+      groupName: group?.name ?? null,
+      medicalNotes: student.medicalNotes ?? null,
       createdAtMs: student._creationTime,
+      dateOfBirth: student.dateOfBirth ?? null,
+      sex: student.sex ?? null,
+      parentName: student.parentName ?? null,
+      parentPhone: student.parentPhone ?? null,
+      parentEmail: student.parentEmail ?? null,
+      joinedAt: student.joinedAt ?? null,
     };
   },
 });
@@ -164,6 +258,8 @@ export const create = action({
     password: v.string(),
     status: studentStatusValidator,
     image: v.optional(v.string()),
+    groupId: v.optional(v.id("groups")),
+    ...profileFieldsArgs,
   },
   returns: v.object({ studentId: v.id("students") }),
   handler: async (ctx, args) => {
@@ -175,6 +271,7 @@ export const create = action({
     assertPassword(args.password);
     const image =
       args.image !== undefined ? assertImageUrl(args.image) : undefined;
+    const profile = validateProfileFields(args);
 
     const existing = await ctx.runQuery(internal.users.findByEmail, { email });
     if (existing) {
@@ -194,6 +291,8 @@ export const create = action({
       {
         userId: created.user._id,
         status: args.status,
+        ...(args.groupId !== undefined ? { groupId: args.groupId } : {}),
+        ...profile,
       },
     );
     return { studentId };
@@ -210,6 +309,8 @@ export const update = mutation({
     name: v.optional(v.string()),
     status: v.optional(studentStatusValidator),
     image: v.optional(v.union(v.string(), v.null())),
+    groupId: v.optional(v.union(v.id("groups"), v.null())),
+    ...profileFieldsArgs,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -229,12 +330,22 @@ export const update = mutation({
     if (args.name !== undefined || args.image !== undefined) {
       await ctx.db.patch("users", student.userId, userPatch);
     }
-    if (args.status !== undefined) {
-      await ctx.db.patch("students", args.studentId, {
-        status: args.status,
-        updatedAt: Date.now(),
-      });
+
+    const patch: Record<string, unknown> = { updatedAt: Date.now() };
+    if (args.status !== undefined) patch.status = args.status;
+    if (args.groupId !== undefined) {
+      if (args.groupId === null) {
+        patch.groupId = undefined;
+      } else {
+        const group = await ctx.db.get("groups", args.groupId);
+        if (!group || group.status !== "active") {
+          throw new ConvexError("Group not found");
+        }
+        patch.groupId = args.groupId;
+      }
     }
+    Object.assign(patch, validateProfileFields(args));
+    await ctx.db.patch("students", args.studentId, patch);
     return null;
   },
 });
@@ -303,6 +414,7 @@ export const myProfile = query({
       image: v.union(v.string(), v.null()),
       status: v.union(v.literal("active"), v.literal("inactive")),
       createdAtMs: v.number(),
+      ...profileFieldsRecord,
     }),
   ),
   handler: async (ctx) => {
@@ -314,6 +426,12 @@ export const myProfile = query({
       image: self.user.image ?? null,
       status: self.student.status,
       createdAtMs: self.student._creationTime,
+      dateOfBirth: self.student.dateOfBirth ?? null,
+      sex: self.student.sex ?? null,
+      parentName: self.student.parentName ?? null,
+      parentPhone: self.student.parentPhone ?? null,
+      parentEmail: self.student.parentEmail ?? null,
+      joinedAt: self.student.joinedAt ?? null,
     };
   },
 });
@@ -335,12 +453,25 @@ function assertImageUrl(value: string): string {
  * skill from the catalog.
  */
 export const createProfile = internalMutation({
-  args: { userId: v.id("users"), status: studentStatusValidator },
+  args: {
+    userId: v.id("users"),
+    status: studentStatusValidator,
+    groupId: v.optional(v.id("groups")),
+    ...profileFieldsArgs,
+  },
   returns: v.id("students"),
   handler: async (ctx, args) => {
+    if (args.groupId !== undefined) {
+      const group = await ctx.db.get("groups", args.groupId);
+      if (!group || group.status !== "active") {
+        throw new ConvexError("Group not found");
+      }
+    }
     const studentId = await ctx.db.insert("students", {
       userId: args.userId,
       status: args.status,
+      ...(args.groupId !== undefined ? { groupId: args.groupId } : {}),
+      ...validateProfileFields(args),
       updatedAt: Date.now(),
     });
     return studentId;
