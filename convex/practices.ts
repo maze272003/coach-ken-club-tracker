@@ -251,3 +251,104 @@ export const listUpcoming = query({
     return Promise.all(planned.map((practice) => toRecord(ctx, practice)));
   },
 });
+
+/**
+ * Coach-only: mark a practice completed and fan out one training
+ * session per active group member (idempotent — keyed by
+ * (studentId, practiceId)). Members recorded absent on the practice
+ * date are skipped; members with present/late or no attendance
+ * record get a session. Re-running updates actuals and patches
+ * existing fan-out sessions.
+ */
+export const complete = mutation({
+  args: {
+    practiceId: v.id("practices"),
+    actualDurationMinutes: v.optional(v.number()),
+    actualDistanceMeters: v.optional(v.number()),
+  },
+  returns: v.object({
+    sessionsCreated: v.number(),
+    sessionsUpdated: v.number(),
+    sessionsSkipped: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const coach = await requireCoach(ctx);
+    if (!coach) throw new ConvexError(NOT_AUTHORIZED);
+    const practice = await ctx.db.get("practices", args.practiceId);
+    if (!practice) throw new ConvexError("Practice not found");
+    if (practice.status === "cancelled") {
+      throw new ConvexError("Cannot complete a cancelled practice");
+    }
+    const actualDuration =
+      args.actualDurationMinutes ?? practice.plannedDurationMinutes;
+    assertDuration(actualDuration);
+    const actualDistance =
+      args.actualDistanceMeters ?? practice.plannedDistanceMeters;
+    if (actualDistance !== undefined) assertDistanceMeters(actualDistance);
+
+    const members = await ctx.db
+      .query("students")
+      .withIndex("by_group", (q) => q.eq("groupId", practice.groupId))
+      .take(500);
+
+    let sessionsCreated = 0;
+    let sessionsUpdated = 0;
+    let sessionsSkipped = 0;
+
+    for (const member of members) {
+      if (member.status !== "active") {
+        sessionsSkipped += 1;
+        continue;
+      }
+      const existing = await ctx.db
+        .query("trainingSessions")
+        .withIndex("by_student_and_practice", (q) =>
+          q.eq("studentId", member._id).eq("practiceId", practice._id),
+        )
+        .unique();
+      if (existing) {
+        await ctx.db.patch("trainingSessions", existing._id, {
+          date: practice.date,
+          title: practice.title,
+          durationMinutes: actualDuration,
+          ...(actualDistance !== undefined ? { distanceMeters: actualDistance } : {}),
+          strokes: practice.strokes,
+          updatedAt: Date.now(),
+        });
+        sessionsUpdated += 1;
+        continue;
+      }
+      const attendance = await ctx.db
+        .query("attendance")
+        .withIndex("by_student_and_date", (q) =>
+          q.eq("studentId", member._id).eq("date", practice.date),
+        )
+        .unique();
+      if (attendance?.status === "absent") {
+        sessionsSkipped += 1;
+        continue;
+      }
+      await ctx.db.insert("trainingSessions", {
+        studentId: member._id,
+        practiceId: practice._id,
+        date: practice.date,
+        title: practice.title,
+        durationMinutes: actualDuration,
+        ...(actualDistance !== undefined ? { distanceMeters: actualDistance } : {}),
+        strokes: practice.strokes,
+        notes: `From practice: ${practice.notes ?? ""}`.slice(0, 2000),
+        updatedAt: Date.now(),
+      });
+      sessionsCreated += 1;
+    }
+
+    await ctx.db.patch("practices", practice._id, {
+      status: "completed",
+      completedAt: practice.completedAt ?? Date.now(),
+      actualDurationMinutes: actualDuration,
+      ...(actualDistance !== undefined ? { actualDistanceMeters: actualDistance } : {}),
+      updatedAt: Date.now(),
+    });
+    return { sessionsCreated, sessionsUpdated, sessionsSkipped };
+  },
+});

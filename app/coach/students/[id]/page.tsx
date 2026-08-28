@@ -178,7 +178,7 @@ export default function CoachStudentDetailPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           icon={CalendarCheck}
           label="Attendance"
@@ -191,6 +191,22 @@ export default function CoachStudentDetailPage() {
             attendance === undefined
               ? undefined
               : `${attendance.stats.attended} of ${attendance.stats.total} sessions attended`
+          }
+        />
+        <StatCard
+          icon={Target}
+          label="Commitment"
+          value={
+            student.commitment === null || student.commitment.percentage === null
+              ? "—"
+              : `${student.commitment.percentage}%`
+          }
+          hint={
+            student.commitment === null
+              ? "Assign a training group to track commitment"
+              : student.commitment.percentage === null
+                ? "No completed group practices yet"
+                : `${student.commitment.attended} of ${student.commitment.held} group practices attended`
           }
         />
         <StatCard

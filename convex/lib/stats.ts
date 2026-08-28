@@ -63,3 +63,47 @@ export async function overallProgress(
   const sum = relevant.reduce((acc, s) => acc + s.progress, 0);
   return Math.round(sum / relevant.length);
 }
+
+export type CommitmentStats = {
+  held: number;
+  attended: number;
+  percentage: number | null;
+};
+
+/**
+ * Commitment = attended (present/late) ÷ completed group practices
+ * since the swimmer's join date. Null when the swimmer has no group.
+ * Legacy record-based attendance stats are unaffected.
+ */
+export async function commitmentStats(
+  ctx: QueryCtx,
+  studentId: Id<"students">,
+): Promise<CommitmentStats | null> {
+  const student = await ctx.db.get("students", studentId);
+  if (!student?.groupId) return null;
+  const groupId = student.groupId;
+  const practices = await ctx.db
+    .query("practices")
+    .withIndex("by_group_and_date", (q) => q.eq("groupId", groupId))
+    .take(500);
+  const fromDate = student.joinedAt ?? null;
+  let held = 0;
+  let attended = 0;
+  for (const practice of practices) {
+    if (practice.status !== "completed") continue;
+    if (fromDate !== null && practice.date < fromDate) continue;
+    held += 1;
+    const record = await ctx.db
+      .query("attendance")
+      .withIndex("by_student_and_date", (q) =>
+        q.eq("studentId", studentId).eq("date", practice.date),
+      )
+      .unique();
+    if (record !== null && record.status !== "absent") attended += 1;
+  }
+  return {
+    held,
+    attended,
+    percentage: held === 0 ? null : Math.round((attended / held) * 100),
+  };
+}

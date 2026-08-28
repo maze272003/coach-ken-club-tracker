@@ -15,7 +15,7 @@ import {
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { requireCoach, requireStudent } from "./lib/access";
-import { attendanceStats, overallProgress } from "./lib/stats";
+import { attendanceStats, commitmentStats, overallProgress } from "./lib/stats";
 import {
   assertDateOfBirth,
   assertDateString,
@@ -213,6 +213,14 @@ export const get = query({
       groupName: v.union(v.string(), v.null()),
       medicalNotes: v.union(v.string(), v.null()),
       createdAtMs: v.number(),
+      commitment: v.union(
+        v.null(),
+        v.object({
+          held: v.number(),
+          attended: v.number(),
+          percentage: v.union(v.number(), v.null()),
+        }),
+      ),
       ...profileFieldsRecord,
     }),
   ),
@@ -226,6 +234,7 @@ export const get = query({
     const group = student.groupId
       ? await ctx.db.get("groups", student.groupId)
       : null;
+    const commitment = await commitmentStats(ctx, student._id);
     return {
       studentId: student._id,
       userId: user._id,
@@ -237,6 +246,7 @@ export const get = query({
       groupName: group?.name ?? null,
       medicalNotes: student.medicalNotes ?? null,
       createdAtMs: student._creationTime,
+      commitment,
       dateOfBirth: student.dateOfBirth ?? null,
       sex: student.sex ?? null,
       parentName: student.parentName ?? null,
