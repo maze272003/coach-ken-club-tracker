@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import {
   Activity,
+  CalendarClock,
   ClipboardCheck,
   Dumbbell,
   Gauge,
@@ -18,6 +19,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StudentAvatar } from "@/components/shared/student-avatar";
+import { CompletePracticeDialog } from "@/components/coach/complete-practice-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatRelativeTime } from "@/lib/format";
+import { formatRelativeTime, todayDateString } from "@/lib/format";
 
 const activityIcons = {
   attendance: ClipboardCheck,
@@ -43,8 +45,16 @@ export default function CoachDashboardPage() {
   const overview = useQuery(api.dashboard.coachOverview, {});
   const [search, setSearch] = useState("");
   const students = useQuery(api.students.list, { search });
+  const upcomingPractices = useQuery(api.practices.listUpcoming, {
+    fromDate: todayDateString(),
+  });
 
   const activity = useMemo(() => overview?.recentActivity ?? [], [overview]);
+
+  const today = todayDateString();
+  const todaysPractices = (upcomingPractices ?? []).filter(
+    (p) => p.date === today,
+  );
 
   return (
     <div className="space-y-6">
@@ -88,6 +98,68 @@ export default function CoachDashboardPage() {
           />
         </div>
       )}
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <CalendarClock
+              className="size-4 text-muted-foreground"
+              aria-hidden="true"
+            />
+            Today&apos;s Practices
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {upcomingPractices === undefined ? (
+            <Skeleton className="h-14" />
+          ) : todaysPractices.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No practices scheduled today.{" "}
+              <Link
+                href="/coach/practices"
+                className="underline hover:text-foreground"
+              >
+                Schedule one
+              </Link>
+              .
+            </p>
+          ) : (
+            <ul className="divide-y">
+              {todaysPractices.map((practice) => (
+                <li
+                  key={practice._id}
+                  className="flex flex-wrap items-center justify-between gap-3 py-3"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{practice.title}</span>
+                      <span className="rounded-full bg-sky-500/10 px-2.5 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-400/15 dark:text-sky-400">
+                        {practice.plannedDurationMinutes} min
+                        {practice.plannedDistanceMeters !== null
+                          ? ` · ${practice.plannedDistanceMeters.toLocaleString()} m`
+                          : ""}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {practice.groupName}
+                      {practice.startTime ? ` at ${practice.startTime}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CompletePracticeDialog practice={practice} />
+                    <Link
+                      href="/coach/attendance"
+                      className="text-sm underline text-muted-foreground hover:text-foreground"
+                    >
+                      Roll call
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1">
