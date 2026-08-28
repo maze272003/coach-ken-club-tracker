@@ -560,3 +560,157 @@ export const listRecent = query({
     }));
   },
 });
+
+/**
+ * Coach-only: export enriched time results for reporting and CSV download.
+ */
+export const exportTimes = query({
+  args: {
+    studentId: v.optional(v.id("students")),
+    groupId: v.optional(v.id("groups")),
+    startDate: v.optional(v.string()),
+    endDate: v.optional(v.string()),
+    stroke: v.optional(strokeValidator),
+    distanceMeters: v.optional(v.number()),
+    course: v.optional(courseValidator),
+    context: v.optional(contextValidator),
+  },
+  returns: v.object({
+    records: v.array(
+      v.object({
+        _id: v.id("timeResults"),
+        studentId: v.id("students"),
+        studentName: v.string(),
+        groupName: v.union(v.string(), v.null()),
+        date: v.string(),
+        distanceMeters: v.number(),
+        stroke: v.string(),
+        course: courseValidator,
+        timeMs: v.number(),
+        formattedTime: v.string(),
+        context: contextValidator,
+        notes: v.union(v.string(), v.null()),
+        event: v.string(),
+        isPersonalBest: v.boolean(),
+        updatedAt: v.number(),
+      }),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    const coach = await requireCoach(ctx);
+    if (!coach) throw new ConvexError(NOT_AUTHORIZED);
+
+    if (args.startDate !== undefined) assertDateString(args.startDate);
+    if (args.endDate !== undefined) assertDateString(args.endDate);
+
+    let times;
+    if (args.studentId !== undefined) {
+      times = await ctx.db
+        .query("timeResults")
+        .withIndex("by_student_and_date", (q) => q.eq("studentId", args.studentId!))
+        .order("desc")
+        .take(5000);
+    } else if (args.startDate !== undefined && args.endDate !== undefined) {
+      times = await ctx.db
+        .query("timeResults")
+        .withIndex("by_date", (q) =>
+          q.gte("date", args.startDate!).lte("date", args.endDate!),
+        )
+        .order("desc")
+        .take(5000);
+    } else {
+      times = await ctx.db
+        .query("timeResults")
+        .withIndex("by_date")
+        .order("desc")
+        .take(5000);
+    }
+
+    // Filter in-memory for remaining criteria
+    if (args.startDate !== undefined) {
+      times = times.filter((t) => t.date >= args.startDate!);
+    }
+    if (args.endDate !== undefined) {
+      times = times.filter((t) => t.date <= args.endDate!);
+    }
+    if (args.stroke !== undefined) {
+      times = times.filter((t) => t.stroke === args.stroke);
+    }
+    if (args.distanceMeters !== undefined) {
+      times = times.filter((t) => t.distanceMeters === args.distanceMeters);
+    }
+    if (args.course !== undefined) {
+      times = times.filter((t) => t.course === args.course);
+    }
+    if (args.context !== undefined) {
+      times = times.filter((t) => t.context === args.context);
+    }
+
+    // Hydrate students, users, and groups
+    const studentIds = Array.from(new Set(times.map((t) => t.studentId)));
+    const studentInfoMap = new Map<
+      string,
+      { name: string; groupId?: Id<"groups">; groupName?: string }
+    >();
+
+    const groups = await ctx.db.query("groups").take(200);
+    const groupNameMap = new Map(groups.map((g) => [g._id, g.name]));
+
+    await Promise.all(
+      studentIds.map(async (sId) => {
+        const student = await ctx.db.get("students", sId);
+        if (!student) return;
+        const user = await ctx.db.get("users", student.userId);
+        studentInfoMap.set(sId, {
+          name: user?.name ?? "Unknown",
+          groupId: student.groupId,
+          groupName: student.groupId ? groupNameMap.get(student.groupId) : undefined,
+        });
+      }),
+    );
+
+    // Filter by group if requested
+    if (args.groupId !== undefined) {
+      times = times.filter((t) => {
+        const info = studentInfoMap.get(t.studentId);
+        return info?.groupId === args.groupId;
+      });
+    }
+
+    // Compute Personal Bests per student/event across all times
+    const bestByStudentAndEvent = new Map<string, number>();
+    for (const t of times) {
+      const key = `${t.studentId}-${t.stroke}-${t.distanceMeters}-${t.course}`;
+      const cur = bestByStudentAndEvent.get(key);
+      if (cur === undefined || t.timeMs < cur) {
+        bestByStudentAndEvent.set(key, t.timeMs);
+      }
+    }
+
+    const records = times.map((t) => {
+      const info = studentInfoMap.get(t.studentId);
+      const key = `${t.studentId}-${t.stroke}-${t.distanceMeters}-${t.course}`;
+      const best = bestByStudentAndEvent.get(key);
+      return {
+        _id: t._id,
+        studentId: t.studentId,
+        studentName: info?.name ?? "Unknown",
+        groupName: info?.groupName ?? null,
+        date: t.date,
+        distanceMeters: t.distanceMeters,
+        stroke: t.stroke,
+        course: t.course,
+        timeMs: t.timeMs,
+        formattedTime: formatTimeMs(t.timeMs),
+        context: t.context,
+        notes: t.notes ?? null,
+        event: formatEventName(t.distanceMeters, t.stroke, t.course),
+        isPersonalBest: best !== undefined && t.timeMs === best,
+        updatedAt: t.updatedAt,
+      };
+    });
+
+    return { records };
+  },
+});
+
