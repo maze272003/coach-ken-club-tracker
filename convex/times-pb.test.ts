@@ -83,9 +83,10 @@ describe("Personal Best Detection & Isolation Engine", () => {
       .withIdentity({ subject: coachId })
       .query(api.times.getPersonalBests, { studentId });
     expect(pbs).toHaveLength(2); // 50m Free SCM (28.50s) and 50m Free LCM (31.00s)
-    const scmPB = pbs.find((p) => p.course === "short");
-    const lcmPB = pbs.find((p) => p.course === "long");
+    const scmPB = pbs.find((p: { course: string; timeMs: number }) => p.course === "short");
+    const lcmPB = pbs.find((p: { course: string; timeMs: number }) => p.course === "long");
     expect(scmPB?.timeMs).toBe(28500);
     expect(lcmPB?.timeMs).toBe(31000);
   });
+
 });

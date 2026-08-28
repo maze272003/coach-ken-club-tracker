@@ -35,6 +35,8 @@ describe("Measurable Goals v2 (Time & Attendance)", () => {
       progress: 0,
       status: "in_progress",
     });
+    expect(goalId).toBeDefined();
+
 
     // 3. Mid-way swim: 31.00s -> Progress: (32000 - 31000)/(32000 - 30000) = 50%
     await t.withIdentity({ subject: coachId }).mutation(api.times.create, {

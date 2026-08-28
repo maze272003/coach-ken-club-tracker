@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
+import { Button } from "@/components/ui/button";
 import {
   Activity,
   CalendarClock,
@@ -11,9 +12,11 @@ import {
   Gauge,
   Search,
   Target,
+  Timer,
   UserRound,
   Users,
 } from "lucide-react";
+
 import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -61,7 +64,17 @@ export default function CoachDashboardPage() {
       <PageHeader
         title="Dashboard"
         description="How are your swimmers progressing?"
+        actions={
+          <Link href="/coach/times">
+            <Button variant="outline" className="gap-2">
+              <Timer className="h-4 w-4 text-amber-500" />
+              Run Time Trial
+            </Button>
+          </Link>
+        }
       />
+
+
 
       {overview === undefined ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

@@ -153,7 +153,7 @@ export function assertTimeMs(ms: number): void {
 }
 
 export function assertEventDistance(distance: number): asserts distance is EventDistance {
-  if (!VALID_DISTANCES.includes(distance as any)) {
+  if (!VALID_DISTANCES.includes(distance as EventDistance)) {
     throw new ConvexError(
       `Invalid distance. Must be one of: ${VALID_DISTANCES.join(", ")}m`,
     );
@@ -167,8 +167,9 @@ export function assertCourse(course: string): asserts course is "short" | "long"
 }
 
 export function assertStroke(stroke: string): asserts stroke is ValidStroke {
-  if (!VALID_STROKES.includes(stroke as any)) {
+  if (!VALID_STROKES.includes(stroke as ValidStroke)) {
     throw new ConvexError(`Invalid stroke: ${stroke}`);
   }
 }
+
 

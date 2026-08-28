@@ -22,6 +22,7 @@ import type * as seed from "../seed.js";
 import type * as skills from "../skills.js";
 import type * as students from "../students.js";
 import type * as tests_helpers from "../tests/helpers.js";
+import type * as times from "../times.js";
 import type * as training from "../training.js";
 import type * as users from "../users.js";
 
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   skills: typeof skills;
   students: typeof students;
   "tests/helpers": typeof tests_helpers;
+  times: typeof times;
   training: typeof training;
   users: typeof users;
 }>;

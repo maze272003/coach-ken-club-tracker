@@ -9,10 +9,12 @@ const navItems: NavItem[] = [
   { href: "/coach/students", label: "Students", icon: "Users" },
   { href: "/coach/groups", label: "Groups", icon: "UsersRound" },
   { href: "/coach/practices", label: "Practices", icon: "CalendarClock" },
+  { href: "/coach/times", label: "Times", icon: "Timer" },
   { href: "/coach/attendance", label: "Attendance", icon: "ClipboardCheck" },
   { href: "/coach/training", label: "Training", icon: "Dumbbell" },
   { href: "/coach/skills", label: "Skills", icon: "Gauge" },
   { href: "/coach/goals", label: "Goals", icon: "Target" },
+
   { href: "/coach/profile", label: "Profile", icon: "User", exact: true },
 ];
 

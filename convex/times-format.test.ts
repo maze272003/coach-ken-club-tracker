@@ -41,11 +41,12 @@ describe("Time Parsing and Formatting Helpers", () => {
     expect(() => assertEventDistance(75)).toThrow();
     expect(() => assertCourse("short")).not.toThrow();
     expect(() => assertCourse("long")).not.toThrow();
-    expect(() => assertCourse("yards" as any)).toThrow();
+    expect(() => assertCourse("yards" as unknown as "short")).toThrow();
     expect(() => assertStroke("freestyle")).not.toThrow();
     expect(() => assertStroke("im")).not.toThrow();
-    expect(() => assertStroke("dog_paddle" as any)).toThrow();
+    expect(() => assertStroke("dog_paddle" as unknown as "freestyle")).toThrow();
     expect(() => assertTimeMs(25000)).not.toThrow();
+
     expect(() => assertTimeMs(0)).toThrow();
     expect(() => assertTimeMs(3600001)).toThrow();
   });

@@ -14,6 +14,7 @@ import {
   LogOutIcon,
   MenuIcon,
   Target,
+  Timer,
   User,
   Users,
   UsersRound,
@@ -41,6 +42,7 @@ export type NavIconName =
   | "Dumbbell"
   | "Gauge"
   | "Target"
+  | "Timer"
   | "User"
   | "UsersRound"
   | "Waves"
@@ -50,6 +52,7 @@ export type NavIconName =
   | "training"
   | "skills"
   | "goals"
+  | "times"
   | "profile";
 
 const iconMap: Record<NavIconName, LucideIcon> = {
@@ -61,6 +64,7 @@ const iconMap: Record<NavIconName, LucideIcon> = {
   Dumbbell,
   Gauge,
   Target,
+  Timer,
   User,
   UsersRound,
   Waves,
@@ -70,8 +74,10 @@ const iconMap: Record<NavIconName, LucideIcon> = {
   training: CalendarDays,
   skills: Gauge,
   goals: Target,
+  times: Timer,
   profile: User,
 };
+
 
 export type NavItem = {
   href: string;
