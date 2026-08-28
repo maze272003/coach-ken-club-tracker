@@ -113,6 +113,7 @@ export default function CoachStudentDetailPage() {
                 name: student.name,
                 status: student.status,
                 image: student.image ?? "",
+                groupId: null,
               }}
             />
             <ResetPasswordDialog studentId={student.studentId} />

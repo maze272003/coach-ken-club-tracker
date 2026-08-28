@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAction, useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import { KeyRound, Pencil } from "lucide-react";
 import { z } from "zod";
@@ -44,16 +44,20 @@ export function EditStudentDialog({
   initial,
 }: {
   studentId: string;
-  initial: { name: string; status: "active" | "inactive"; image: string };
+  initial: { name: string; status: "active" | "inactive"; image: string; groupId: string | null };
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(initial.name);
   const [status, setStatus] = useState<"active" | "inactive">(initial.status);
   const [image, setImage] = useState(initial.image);
+  const [groupId, setGroupId] = useState<string>(initial.groupId ?? "unassigned");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const update = useMutation(api.students.update);
+  const assignStudent = useMutation(api.groups.assignStudent);
+  const groups = useQuery(api.groups.list, {});
+  const activeGroups = (groups ?? []).filter((g) => g.status === "active");
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,6 +82,12 @@ export function EditStudentDialog({
         status: parsed.data.status,
         image: parsed.data.image === "" ? null : parsed.data.image,
       });
+      if (groupId !== (initial.groupId ?? "unassigned")) {
+        await assignStudent({
+          studentId: studentId as never,
+          groupId: groupId === "unassigned" ? null : (groupId as never),
+        });
+      }
       toast.success("Student updated.");
       setOpen(false);
       setSubmitting(false);
@@ -134,6 +144,26 @@ export function EditStudentDialog({
             {fieldErrors.image ? (
               <p className="text-xs text-destructive">{fieldErrors.image}</p>
             ) : null}
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="edit-group">Training group</Label>
+            <Select
+              value={groupId}
+              onValueChange={setGroupId}
+              disabled={submitting || groups === undefined}
+            >
+              <SelectTrigger id="edit-group" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {activeGroups.map((group) => (
+                  <SelectItem key={group.groupId} value={group.groupId}>
+                    {group.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="edit-status">Status</Label>

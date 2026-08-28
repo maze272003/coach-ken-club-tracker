@@ -11,6 +11,13 @@ import { StudentAvatar } from "@/components/shared/student-avatar";
 import { CreateStudentDialog } from "@/components/students/create-student-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -24,7 +31,18 @@ import {
 
 export default function CoachStudentsPage() {
   const [search, setSearch] = useState("");
-  const students = useQuery(api.students.list, { search });
+  const [groupFilter, setGroupFilter] = useState("all");
+  const groups = useQuery(api.groups.list, {});
+  const activeGroups = (groups ?? []).filter((g) => g.status === "active");
+  const students = useQuery(api.students.list, {
+    search,
+    groupId:
+      groupFilter === "all"
+        ? undefined
+        : groupFilter === "unassigned"
+          ? null
+          : (groupFilter as never),
+  });
 
   return (
     <div className="space-y-6">
@@ -50,6 +68,20 @@ export default function CoachStudentsPage() {
               aria-label="Search students"
             />
           </div>
+          <Select value={groupFilter} onValueChange={setGroupFilter}>
+            <SelectTrigger className="w-full max-w-44" aria-label="Filter by group">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All groups</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {activeGroups.map((group) => (
+                <SelectItem key={group.groupId} value={group.groupId}>
+                  {group.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {students === undefined ? (
             <div className="space-y-2">
@@ -74,6 +106,7 @@ export default function CoachStudentsPage() {
                   <TableRow>
                     <TableHead>Student</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="hidden md:table-cell">Group</TableHead>
                     <TableHead className="hidden sm:table-cell">Attendance</TableHead>
                     <TableHead className="hidden md:table-cell">Progress</TableHead>
                     <TableHead className="hidden lg:table-cell">Current goal</TableHead>
@@ -111,6 +144,13 @@ export default function CoachStudentsPage() {
                         >
                           {student.status === "active" ? "Active" : "Inactive"}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {student.groupName === null ? (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        ) : (
+                          <span className="text-sm">{student.groupName}</span>
+                        )}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">
                         {student.attendancePercentage === null ? (

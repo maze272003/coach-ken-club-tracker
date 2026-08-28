@@ -15,6 +15,7 @@ import {
   Target,
   User,
   Users,
+  UsersRound,
   Waves,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -39,6 +40,7 @@ export type NavIconName =
   | "Gauge"
   | "Target"
   | "User"
+  | "UsersRound"
   | "Waves"
   | "dashboard"
   | "students"
@@ -57,6 +59,7 @@ const iconMap: Record<NavIconName, LucideIcon> = {
   Gauge,
   Target,
   User,
+  UsersRound,
   Waves,
   dashboard: LayoutDashboard,
   students: Users,
