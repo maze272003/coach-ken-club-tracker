@@ -8,6 +8,7 @@ import {
   CalendarCheck,
   ClipboardList,
   Dumbbell,
+  FileText,
   Gauge,
   Target,
 } from "lucide-react";
@@ -27,11 +28,11 @@ import { GoalFormDialog } from "@/components/coach/goal-form-dialog";
 import { StudentTimesTab } from "@/components/coach/student-times-tab";
 import { StudentTrendsTab } from "@/components/coach/student-trends-tab";
 import {
-
   EditStudentDialog,
   ResetPasswordDialog,
 } from "@/components/coach/edit-student-dialog";
 import { ExportAttendanceDialog } from "@/components/coach/export-attendance-dialog";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -111,6 +112,12 @@ export default function CoachStudentDetailPage() {
         description={student.email}
         actions={
           <>
+            <Link href={`/coach/students/${student.studentId}/report`}>
+              <Button variant="outline" className="gap-2">
+                <FileText className="h-4 w-4" />
+                Report card
+              </Button>
+            </Link>
             <EditStudentDialog
               studentId={student.studentId}
               initial={{
