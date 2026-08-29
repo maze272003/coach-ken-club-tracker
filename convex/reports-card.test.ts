@@ -6,6 +6,7 @@ import schema from "./schema";
 import { modules } from "./test.setup";
 import { api } from "./_generated/api";
 import { seedCoach, seedStudent } from "./tests/helpers";
+import { buildAthleteCard } from "./lib/reportCard";
 
 describe("reports.athleteCard", () => {
   it("rejects students and anonymous callers", async () => {
@@ -60,5 +61,25 @@ describe("reports.athleteCard", () => {
     expect(card.skills[0]!.progress).toBe(72);
     expect(card.volumeByWeek).toHaveLength(12);
     expect(card.commitment).not.toBeNull();
+  });
+});
+
+describe("buildAthleteCard", () => {
+  it("computes the full card without an authenticated viewer", async () => {
+    const t = convexTest(schema, modules);
+    const { studentId } = await seedStudent(t, "No Auth Needed");
+
+    const card = await t.run(async (ctx) => {
+      const student = (await ctx.db.get("students", studentId))!;
+      return buildAthleteCard(ctx, student, "2026-08-29");
+    });
+
+    expect(card.student.name).toBe("No Auth Needed");
+    expect(card.student.email).toBeNull();
+    expect(card.volumeByWeek).toHaveLength(12);
+    expect(card.attendance.total).toBe(0);
+    expect(card.commitment).toBeNull();
+    expect(card.pbs).toEqual([]);
+    expect(card.goals).toEqual([]);
   });
 });

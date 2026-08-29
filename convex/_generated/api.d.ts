@@ -21,6 +21,7 @@ import type * as lib_access from "../lib/access.js";
 import type * as lib_flags from "../lib/flags.js";
 import type * as lib_images from "../lib/images.js";
 import type * as lib_kpis from "../lib/kpis.js";
+import type * as lib_reportCard from "../lib/reportCard.js";
 import type * as lib_stats from "../lib/stats.js";
 import type * as lib_time from "../lib/time.js";
 import type * as lib_validation from "../lib/validation.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   "lib/flags": typeof lib_flags;
   "lib/images": typeof lib_images;
   "lib/kpis": typeof lib_kpis;
+  "lib/reportCard": typeof lib_reportCard;
   "lib/stats": typeof lib_stats;
   "lib/time": typeof lib_time;
   "lib/validation": typeof lib_validation;
