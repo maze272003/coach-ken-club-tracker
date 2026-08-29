@@ -139,3 +139,23 @@ Convex function tests run with vitest + convex-test:
 ```bash
 npm test
 ```
+
+## Parent weekly emails
+
+Every Monday 06:05 (Asia/Manila), each active student with a parent
+email receives their full report card. Emails drip out in batches of 5
+every 2 minutes through Gmail SMTP so the sender account is never
+blasted. A safety cron re-checks the queue every 15 minutes; failed
+sends retry up to 3 times with 30-minute backoff, and sending stops at
+400 emails/day (Gmail's limit is ~500).
+
+Setup:
+
+1. Enable 2FA on the sending Google account and create an App Password
+   (Google Account → Security → App passwords).
+2. Set the Convex environment variables for your deployment:
+   - `npx convex env add SMTP_USER you@gmail.com`
+   - `npx convex env add SMTP_PASS <app password>`
+   - `npx convex env add MAIL_FROM "CoachKen Tracker <you@gmail.com>"` (optional)
+3. Fill in each student's **Parent email** in the coach app.
+4. To send immediately: **Reports → Send parent emails**.
