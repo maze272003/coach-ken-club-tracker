@@ -6,6 +6,8 @@ import type { MutationCtx } from "./_generated/server";
 import {
   internalMutation,
   internalQuery,
+  mutation,
+  query,
 } from "./_generated/server";
 import { requireCoach } from "./lib/access";
 import { buildAthleteCard } from "./lib/reportCard";
@@ -209,5 +211,51 @@ export const kickIfPending = internalMutation({
       await ctx.scheduler.runAfter(0, internal.parentEmailsActions.processBatch, {});
     }
     return null;
+  },
+});
+
+/** Coach-only: enqueue any missing students for the completed week and send now. */
+export const triggerNow = mutation({
+  args: {},
+  returns: v.object({
+    weekStart: v.string(),
+    enqueued: v.number(),
+    errors: v.array(
+      v.object({ student: v.string(), error: v.string() }),
+    ),
+  }),
+  handler: async (ctx) => {
+    const coach = await requireCoach(ctx);
+    if (!coach) throw new ConvexError(NOT_AUTHORIZED);
+    const weekStart = lastCompletedWeekStart();
+    const summary = await enqueueEligible(ctx, weekStart);
+    await ctx.scheduler.runAfter(0, internal.parentEmailsActions.processBatch, {});
+    return { weekStart, ...summary };
+  },
+});
+
+/** Coach-only: this week's queue counts for the reports page strip. */
+export const weekStatus = query({
+  args: {},
+  returns: v.object({
+    weekStart: v.string(),
+    pending: v.number(),
+    sent: v.number(),
+    failed: v.number(),
+  }),
+  handler: async (ctx) => {
+    const coach = await requireCoach(ctx);
+    if (!coach) throw new ConvexError(NOT_AUTHORIZED);
+    const weekStart = lastCompletedWeekStart();
+    const rows = await ctx.db
+      .query("parentEmails")
+      .withIndex("by_week_and_student", (q) => q.eq("weekStart", weekStart))
+      .collect();
+    return {
+      weekStart,
+      pending: rows.filter((r) => r.status === "pending").length,
+      sent: rows.filter((r) => r.status === "sent").length,
+      failed: rows.filter((r) => r.status === "failed").length,
+    };
   },
 });
