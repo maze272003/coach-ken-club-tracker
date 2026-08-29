@@ -814,6 +814,8 @@ export const seed = action({
       })),
     });
 
+    await ctx.runMutation(internal.reports.generateWeekly, {});
+
     return { created: DEMO_STUDENTS.length };
   },
 });
@@ -1150,6 +1152,10 @@ export const deleteDemoGroupsAndPractices = internalMutation({
         removedPractices += 1;
       }
       await ctx.db.delete("groups", group._id);
+    }
+    const reports = await ctx.db.query("reports").take(500);
+    for (const r of reports) {
+      await ctx.db.delete("reports", r._id);
     }
     return { removedPractices, removedGroups: demoGroups.length };
   },

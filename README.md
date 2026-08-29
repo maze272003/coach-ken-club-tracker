@@ -76,8 +76,8 @@ Demo credentials (dev only):
 ```
 convex/
   schema.ts        users, groups, skills, students, attendance, practices,
-                   trainingSessions, strokeSkills, trainingGoals
-                   (+ auth tables)
+                   trainingSessions, strokeSkills, timeResults, trainingGoals,
+                   reports (+ auth tables)
   auth.ts          single "password" provider:
                    - coach validates against COACH_EMAIL/COACH_PASSWORD env vars
                    - students validate against scrypt-hashed passwords
@@ -85,19 +85,22 @@ convex/
   attendance.ts    roll call (single + bulk) + per-student history/stats
   training.ts      training sessions (duration, distance, intensity)
   skills.ts        stroke skill progress (record-based, extensible strokes)
-  goals.ts         training goals
+  goals.ts         training goals (manual, measurable time/attendance)
   groups.ts        training groups with member counts
   practices.ts     group practice planning + one-click completion fan-out
-  dashboard.ts    coach overview + student dashboard aggregates
-  times.ts        swim times (PBs, bulk time trials, CSV export)
-  dataOverview.ts coach-only per-student data coverage matrix
-  seed.ts         demo data + seed:status verification report
-  lib/            access control, validation, stats helpers
+  dashboard.ts     coach overview v2 (KPIs, deltas) + student dashboard aggregates
+  insights.ts      attention flags (M8) and trends aggregate queries (S1)
+  reports.ts       athlete report cards & weekly team reports (S2)
+  crons.ts         weekly report automated cron (Monday 06:00 Asia/Manila)
+  times.ts         swim times (PBs, bulk time trials, CSV export)
+  dataOverview.ts  coach-only per-student data coverage matrix
+  seed.ts          demo data + seed:status verification report
+  lib/             access control, validation, stats, time, flags, kpis
 
 app/
   login/                      sign-in page (no public registration)
   coach/                      dashboard, students, groups, practices,
-                              times, attendance, training, skills,
+                              times, reports, attendance, training, skills,
                               goals, data (seed overview), profile
   student/                    dashboard, attendance, training, skills,
                               times, goals, profile

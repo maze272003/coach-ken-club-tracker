@@ -1,7 +1,6 @@
 // components/coach/weekly-report-card.tsx
 "use client";
 
-import { CalendarCheck, ClipboardCheck, Flag, Timer, Waves } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
 

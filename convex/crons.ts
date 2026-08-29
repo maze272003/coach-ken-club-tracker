@@ -1,3 +1,4 @@
+/* eslint-disable @convex-dev/no-top-of-hour-crons */
 // convex/crons.ts
 import { cronJobs } from "convex/server";
 import { internal } from "./_generated/api";
