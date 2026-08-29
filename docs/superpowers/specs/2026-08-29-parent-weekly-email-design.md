@@ -167,8 +167,10 @@ always match the week they report, even if data changes later.
 
 - `parentEmails.triggerNow` — public mutation guarded by
   `requireCoach` (`lib/access.ts`, same as all coach functions):
-  enqueues any missing students for the current week (idempotent via
-  the unique index) and kicks the processor.
+  enqueues any missing students for the most recent completed week —
+  the same `weekStart` rule as `enqueueWeekly` (ISO week start of
+  yesterday in coach timezone), so the button and the cron always
+  target the same report — and kicks the processor.
 - `parentEmails.weekStatus` — coach-only query returning this week's
   `{ pending, sent, failed }` counts.
 - Coach reports page (`app/coach/reports/page.tsx`): a
