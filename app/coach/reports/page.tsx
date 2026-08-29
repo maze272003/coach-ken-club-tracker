@@ -1,8 +1,9 @@
-// app/coach/reports/page.tsx
 "use client";
 
-import { useQuery } from "convex/react";
-import { FileText, Printer } from "lucide-react";
+import { useState } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { FileText, Mail, Printer } from "lucide-react";
+import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -15,6 +16,25 @@ import {
 
 export default function CoachReportsPage() {
   const result = useQuery(api.reports.list, {});
+  const emailStatus = useQuery(api.parentEmails.weekStatus, {});
+  const triggerEmails = useMutation(api.parentEmails.triggerNow);
+  const [sending, setSending] = useState(false);
+
+  const onSendEmails = async () => {
+    setSending(true);
+    try {
+      const r = await triggerEmails({});
+      toast.success(
+        r.enqueued > 0
+          ? `Queued ${r.enqueued} parent email${r.enqueued === 1 ? "" : "s"} for the week of ${r.weekStart}`
+          : `All parent emails for the week of ${r.weekStart} are already queued`,
+      );
+    } catch {
+      toast.error("Failed to queue parent emails");
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <div className="space-y-6 print:space-y-4">
@@ -22,16 +42,33 @@ export default function CoachReportsPage() {
         title="Weekly Reports"
         description="Auto-generated every Monday at 06:00."
         actions={
-          <Button
-            variant="outline"
-            className="gap-2 print:hidden"
-            onClick={() => window.print()}
-          >
-            <Printer className="h-4 w-4" />
-            Print
-          </Button>
+          <div className="flex gap-2 print:hidden">
+            <Button
+              className="gap-2"
+              disabled={sending}
+              onClick={() => void onSendEmails()}
+            >
+              <Mail className="h-4 w-4" />
+              {sending ? "Queueing…" : "Send parent emails"}
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2 print:hidden"
+              onClick={() => window.print()}
+            >
+              <Printer className="h-4 w-4" />
+              Print
+            </Button>
+          </div>
         }
       />
+
+      {emailStatus !== undefined && (
+        <p className="text-sm text-muted-foreground print:hidden">
+          Parent emails (week of {emailStatus.weekStart}): {emailStatus.sent} sent ·{" "}
+          {emailStatus.pending} queued · {emailStatus.failed} failed
+        </p>
+      )}
 
       {result === undefined ? (
         <Skeleton className="h-64 rounded-xl" />
