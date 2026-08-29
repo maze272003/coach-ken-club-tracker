@@ -59,12 +59,48 @@ export function initialsOf(name: string | null): string {
 
 /**
  * Maps backend errors to user-friendly messages.
+ *
+ * ConvexError strings from the backend are already written for users, so we
+ * surface them, but we strip developer wrappers ("Uncaught ConvexError: ")
+ * and replace framework/transport errors (auth, network, rate limits) with
+ * plain-language text instead of leaking raw messages into the UI.
  */
 export function errorMessage(err: unknown, fallback: string): string {
-  if (err instanceof Error && err.message) {
-    return err.message;
+  let message = "";
+  if (typeof err === "string") {
+    message = err;
+  } else if (err instanceof Error) {
+    message = err.message;
+  } else if (
+    err &&
+    typeof err === "object" &&
+    typeof (err as { message?: unknown }).message === "string"
+  ) {
+    message = (err as { message: string }).message;
   }
-  return fallback;
+
+  message = message.trim().replace(/^uncaught convexerror:\s*/i, "");
+  if (!message) return fallback;
+
+  const lower = message.toLowerCase();
+  if (
+    lower.includes("unauthenticated") ||
+    lower.includes("not authorized") ||
+    lower.includes("couldn't be found in the database") ||
+    lower.includes("rate limit")
+  ) {
+    if (lower.includes("unauthenticated")) {
+      return "Your session has expired. Please sign in again.";
+    }
+    if (lower.includes("rate limit")) {
+      return "You're doing that too fast. Please wait a moment and try again.";
+    }
+    return "You don't have permission to do that.";
+  }
+  if (/^typeerror|^referenceerror|\.ts:\d+|at \S+\(/i.test(message)) {
+    return fallback;
+  }
+  return message;
 }
 
 /**

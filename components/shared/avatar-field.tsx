@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "convex/react";
+import { toast } from "sonner";
 import { Link2, Trash2, Upload } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
@@ -43,7 +44,6 @@ export function AvatarField({
   );
   const [linkValue, setLinkValue] = useState(isHttpUrl(value) ? value : "");
   const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadRef, setUploadRef] = useState("");
   const [uploadBlobUrl, setUploadBlobUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,13 +75,12 @@ export function AvatarField({
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || disabled || uploading) return;
-    setUploadError(null);
     if (!file.type.startsWith("image/")) {
-      setUploadError("Please choose an image file.");
+      toast.warning("Please choose an image file.");
       return;
     }
     if (file.size > MAX_UPLOAD_BYTES) {
-      setUploadError("Image must be 5 MB or smaller.");
+      toast.warning("Image must be 5 MB or smaller.");
       return;
     }
     setUploading(true);
@@ -99,14 +98,13 @@ export function AvatarField({
       setLinkValue("");
       onChange(storageId);
     } catch {
-      setUploadError("Unable to upload the image. Please try again.");
+      toast.error("Unable to upload the image. Please try again.");
     } finally {
       setUploading(false);
     }
   }
 
   function handleRemove() {
-    setUploadError(null);
     onChange("");
   }
 
@@ -219,11 +217,6 @@ export function AvatarField({
           ) : null}
         </div>
       </div>
-      {uploadError ? (
-        <p className="text-xs text-destructive" role="alert">
-          {uploadError}
-        </p>
-      ) : null}
       {error ? (
         <p className="text-xs text-destructive" role="alert">
           {error}

@@ -19,7 +19,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { errorMessage } from "@/lib/format";
 
 const groupSchema = z.object({
@@ -38,7 +37,6 @@ export function GroupFormDialog({
   const [name, setName] = useState(group?.name ?? "");
   const [description, setDescription] = useState(group?.description ?? "");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const create = useMutation(api.groups.create);
   const rename = useMutation(api.groups.rename);
@@ -46,7 +44,6 @@ export function GroupFormDialog({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) return;
-    setError(null);
     const parsed = groupSchema.safeParse({ name, description });
     if (!parsed.success) {
       const errors: Record<string, string> = {};
@@ -81,7 +78,9 @@ export function GroupFormDialog({
       setOpen(false);
       setSubmitting(false);
     } catch (err) {
-      setError(errorMessage(err, "Unable to save the group. Please try again."));
+      toast.error(
+        errorMessage(err, "Unable to save the group. Please try again."),
+      );
       setSubmitting(false);
     }
   }
@@ -110,11 +109,6 @@ export function GroupFormDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-          {error ? (
-            <Alert variant="destructive" role="alert">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
           <div className="flex flex-col gap-2">
             <Label htmlFor="group-name">Name</Label>
             <Input

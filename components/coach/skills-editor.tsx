@@ -29,7 +29,6 @@ export function SkillsEditor({ studentId }: { studentId: string }) {
   const setProgress = useMutation(api.skills.setProgress);
 
   const [draft, setDraft] = useState<ProgressMap | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const serverValues: ProgressMap = {};
@@ -56,7 +55,6 @@ export function SkillsEditor({ studentId }: { studentId: string }) {
 
   async function handleSave() {
     if (saving || !dirty || draft === null) return;
-    setError(null);
     setSaving(true);
     try {
       const changed = active.filter(
@@ -75,7 +73,7 @@ export function SkillsEditor({ studentId }: { studentId: string }) {
       setDraft(null);
       setSaving(false);
     } catch (err) {
-      setError(
+      toast.error(
         errorMessage(err, "Unable to save skill progress. Please try again."),
       );
       setSaving(false);
@@ -94,11 +92,6 @@ export function SkillsEditor({ studentId }: { studentId: string }) {
         </Button>
       </CardHeader>
       <CardContent className="space-y-5">
-        {error ? (
-          <p className="text-sm text-destructive" role="alert">
-            {error}
-          </p>
-        ) : null}
         {catalogLoading || skills === undefined ? (
           <div className="space-y-4">
             {Array.from({ length: 4 }).map((_, i) => (

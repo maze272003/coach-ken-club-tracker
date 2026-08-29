@@ -60,18 +60,16 @@ export default function CoachPracticesPage() {
   );
   const cancel = useMutation(api.practices.cancel);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   async function cancelPractice(practiceId: string, title: string) {
     if (busyId !== null) return;
-    setError(null);
     setBusyId(practiceId);
     try {
       await cancel({ practiceId: practiceId as never });
       toast.success(`"${title}" cancelled.`);
       setBusyId(null);
     } catch (err) {
-      setError(errorMessage(err, "Unable to cancel. Please try again."));
+      toast.error(errorMessage(err, "Unable to cancel. Please try again."));
       setBusyId(null);
     }
   }
@@ -114,12 +112,6 @@ export default function CoachPracticesPage() {
           ))}
         </SelectContent>
       </Select>
-
-      {error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
 
       {groups !== undefined && activeGroups.length === 0 ? (
         <EmptyState

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { toast } from "sonner";
 import { Waves } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,20 +15,29 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+
+function friendlyAuthError(err: unknown): string {
+  const message = err instanceof Error ? err.message.toLowerCase() : "";
+  if (
+    message.includes("invalid email or password") ||
+    message.includes("invalid credentials") ||
+    message.includes("password")
+  ) {
+    return "Incorrect email or password. Please try again.";
+  }
+  return "Unable to sign in right now. Please try again.";
+}
 
 export default function LoginPage() {
   const { signIn } = useAuthActions();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) return;
-    setError(null);
     setSubmitting(true);
     try {
       await signIn("password", {
@@ -37,11 +47,7 @@ export default function LoginPage() {
       });
       router.replace("/");
     } catch (err) {
-      const message =
-        err instanceof Error && err.message
-          ? err.message
-          : "Unable to sign in. Please try again.";
-      setError(message);
+      toast.error(friendlyAuthError(err));
       setSubmitting(false);
     }
   }
@@ -69,11 +75,6 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              {error ? (
-                <Alert variant="destructive" role="alert">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              ) : null}
               <div className="flex flex-col gap-2">
                 <Label htmlFor="email">Email</Label>
                 <Input

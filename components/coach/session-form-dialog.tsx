@@ -27,7 +27,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSkillCatalog } from "@/lib/use-skill-catalog";
 import { errorMessage, todayDateString } from "@/lib/format";
 
@@ -88,7 +87,6 @@ export function SessionFormDialog({
     notes: initial?.notes ?? "",
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const students = useQuery(
@@ -129,7 +127,6 @@ export function SessionFormDialog({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) return;
-    setError(null);
     const parsed = sessionSchema.safeParse(form);
     if (!parsed.success) {
       const errors: Record<string, string> = {};
@@ -167,7 +164,7 @@ export function SessionFormDialog({
       setOpen(false);
       setSubmitting(false);
     } catch (err) {
-      setError(
+      toast.error(
         errorMessage(err, "Unable to save the training session. Please try again."),
       );
       setSubmitting(false);
@@ -190,11 +187,6 @@ export function SessionFormDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-          {error ? (
-            <Alert variant="destructive" role="alert">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
           {fixedStudentId === undefined ? (
             <div className="flex flex-col gap-2">
               <Label htmlFor="session-student">Student</Label>

@@ -23,7 +23,6 @@ const schema = z.object({
 export function AttendanceForm({ studentId }: { studentId: string }) {
   const [date, setDate] = useState(todayDateString());
   const [status, setStatus] = useState<"present" | "late" | "absent">("present");
-  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const record = useMutation(api.attendance.record);
 
@@ -31,10 +30,9 @@ export function AttendanceForm({ studentId }: { studentId: string }) {
     status: "present" | "late" | "absent",
   ) {
     if (saving) return;
-    setError(null);
     const parsed = schema.safeParse({ date, status });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "Invalid attendance");
+      toast.warning(parsed.error.issues[0]?.message ?? "Invalid attendance");
       return;
     }
     setSaving(true);
@@ -48,7 +46,7 @@ export function AttendanceForm({ studentId }: { studentId: string }) {
       setStatus(status);
       setSaving(false);
     } catch (err) {
-      setError(
+      toast.error(
         errorMessage(err, "Unable to save attendance. Please try again."),
       );
       setSaving(false);
@@ -109,12 +107,7 @@ export function AttendanceForm({ studentId }: { studentId: string }) {
               Absent
             </Button>
           </div>
-        </form>
-        {error ? (
-          <p className="mt-3 text-sm text-destructive" role="alert">
-            {error}
-          </p>
-        ) : null}
+         </form>
       </CardContent>
     </Card>
   );

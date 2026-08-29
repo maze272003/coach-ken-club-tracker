@@ -20,11 +20,9 @@ export default function CoachGroupsPage() {
   const teamTrends = useQuery(api.insights.teamTrends, {});
   const setStatus = useMutation(api.groups.setStatus);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   async function toggleArchive(groupId: string, next: "active" | "archived") {
     if (busyId !== null) return;
-    setError(null);
     setBusyId(groupId);
     try {
       await setStatus({ groupId: groupId as never, status: next });
@@ -33,9 +31,7 @@ export default function CoachGroupsPage() {
       );
       setBusyId(null);
     } catch (err) {
-      setError(
-        errorMessage(err, "Unable to update the group. Please try again."),
-      );
+      toast.error(errorMessage(err, "Unable to update the group. Please try again."));
       setBusyId(null);
     }
   }
@@ -47,12 +43,6 @@ export default function CoachGroupsPage() {
         description="Training groups for planning practices and roll call."
         actions={<GroupFormDialog mode="create" />}
       />
-
-      {error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
 
       {teamTrends !== undefined && teamTrends.volumeByGroup.length > 0 && (
         <Card>

@@ -36,7 +36,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { errorMessage, parseTimeToMs } from "@/lib/format";
 import { VALID_DISTANCES, type ValidStroke } from "@/convex/lib/validation";
 
@@ -129,7 +128,6 @@ export function GoalFormDialog({
     targetDate: initial?.targetDate ?? "",
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const students = useQuery(
@@ -152,7 +150,6 @@ export function GoalFormDialog({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) return;
-    setError(null);
 
     const parsed = goalSchema.safeParse(form);
     if (!parsed.success) {
@@ -222,7 +219,7 @@ export function GoalFormDialog({
       setOpen(false);
       setSubmitting(false);
     } catch (err) {
-      setError(
+      toast.error(
         errorMessage(err, "Unable to save the training goal. Please try again."),
       );
       setSubmitting(false);
@@ -259,12 +256,6 @@ export function GoalFormDialog({
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-            {error ? (
-              <Alert variant="destructive" role="alert">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : null}
-
             {fixedStudentId === undefined ? (
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="goal-student">Swimmer</Label>

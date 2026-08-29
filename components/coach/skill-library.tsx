@@ -34,7 +34,6 @@ export function SkillLibrary() {
 
   const [newName, setNewName] = useState("");
   const [adding, setAdding] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -42,7 +41,6 @@ export function SkillLibrary() {
   async function handleAdd(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (adding || newName.trim() === "") return;
-    setError(null);
     setAdding(true);
     try {
       await addSkill({ name: newName });
@@ -50,14 +48,13 @@ export function SkillLibrary() {
       setNewName("");
       setAdding(false);
     } catch (err) {
-      setError(errorMessage(err, "Unable to add the skill. Please try again."));
+      toast.error(errorMessage(err, "Unable to add the skill. Please try again."));
       setAdding(false);
     }
   }
 
   async function handleRename(skillId: string) {
     if (busyId !== null || editName.trim() === "") return;
-    setError(null);
     setBusyId(skillId);
     try {
       await renameSkill({ skillId: skillId as never, name: editName });
@@ -65,7 +62,7 @@ export function SkillLibrary() {
       setEditingId(null);
       setBusyId(null);
     } catch (err) {
-      setError(errorMessage(err, "Unable to rename the skill. Please try again."));
+      toast.error(errorMessage(err, "Unable to rename the skill. Please try again."));
       setBusyId(null);
     }
   }
@@ -76,14 +73,13 @@ export function SkillLibrary() {
     status: "active" | "archived",
   ) {
     if (busyId !== null) return;
-    setError(null);
     setBusyId(skillId);
     try {
       await setStatus({ skillId: skillId as never, status });
       toast.success(status === "archived" ? `${name} archived.` : `${name} restored.`);
       setBusyId(null);
     } catch (err) {
-      setError(
+      toast.error(
         errorMessage(err, "Unable to update the skill. Please try again."),
       );
       setBusyId(null);
@@ -116,12 +112,6 @@ export function SkillLibrary() {
             {adding ? "Adding…" : "Add Skill"}
           </Button>
         </form>
-
-        {error ? (
-          <p className="text-sm text-destructive" role="alert">
-            {error}
-          </p>
-        ) : null}
 
         {skills === undefined ? (
           <div className="space-y-2">

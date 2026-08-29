@@ -40,7 +40,6 @@ export default function StudentProfilePage() {
     image?: string;
   }>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const updateProfile = useMutation(api.students.updateOwnProfile);
 
@@ -57,7 +56,6 @@ export default function StudentProfilePage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (saving || !profile) return;
-    setError(null);
     const parsed = profileSchema.safeParse({ name, image });
     if (!parsed.success) {
       const errors: Record<string, string> = {};
@@ -82,7 +80,9 @@ export default function StudentProfilePage() {
       toast.success("Profile updated.");
       setSaving(false);
     } catch (err) {
-      setError(errorMessage(err, "Unable to save your profile. Please try again."));
+      toast.error(
+        errorMessage(err, "Unable to save your profile. Please try again."),
+      );
       setSaving(false);
     }
   }
@@ -142,11 +142,6 @@ export default function StudentProfilePage() {
                   <Pencil className="size-3.5 text-muted-foreground" aria-hidden="true" />
                   Edit display name &amp; avatar
                 </h3>
-                {error ? (
-                  <p className="text-sm text-destructive" role="alert">
-                    {error}
-                  </p>
-                ) : null}
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="profile-name">Display name</Label>
                   <Input

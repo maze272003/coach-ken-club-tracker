@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { errorMessage, formatDate } from "@/lib/format";
 
 export function CompletePracticeDialog({
@@ -41,22 +40,20 @@ export function CompletePracticeDialog({
   const [distance, setDistance] = useState(
     practice.plannedDistanceMeters?.toString() ?? "",
   );
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const complete = useMutation(api.practices.complete);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) return;
-    setError(null);
     const parsedDuration = Number(duration);
     if (!Number.isInteger(parsedDuration) || parsedDuration <= 0) {
-      setError("Actual duration must be a positive number of minutes.");
+      toast.warning("Actual duration must be a positive number of minutes.");
       return;
     }
     const trimmed = distance.trim();
     if (trimmed !== "" && !Number.isInteger(Number(trimmed))) {
-      setError("Actual distance must be a whole number of meters.");
+      toast.warning("Actual distance must be a whole number of meters.");
       return;
     }
     setSubmitting(true);
@@ -73,7 +70,7 @@ export function CompletePracticeDialog({
       setOpen(false);
       setSubmitting(false);
     } catch (err) {
-      setError(
+      toast.error(
         errorMessage(err, "Unable to complete the practice. Please try again."),
       );
       setSubmitting(false);
@@ -98,11 +95,6 @@ export function CompletePracticeDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-          {error ? (
-            <Alert variant="destructive" role="alert">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-2">
               <Label htmlFor="actual-duration">Actual duration (min)</Label>

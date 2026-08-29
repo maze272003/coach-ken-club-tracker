@@ -25,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AvatarField } from "@/components/shared/avatar-field";
 import { errorMessage } from "@/lib/format";
 
@@ -74,7 +73,6 @@ export function CreateStudentDialog({
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(initialState);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
   const createStudent = useAction(api.students.create);
   const [submitting, setSubmitting] = useState(false);
   const groups = useQuery(api.groups.list, {});
@@ -87,14 +85,12 @@ export function CreateStudentDialog({
   function reset() {
     setForm(initialState);
     setFieldErrors({});
-    setError(null);
     setSubmitting(false);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) return;
-    setError(null);
 
     const parsed = createStudentSchema.safeParse(form);
     if (!parsed.success) {
@@ -126,7 +122,7 @@ export function CreateStudentDialog({
       reset();
       onCreated?.();
     } catch (err) {
-      setError(
+      toast.error(
         errorMessage(err, "Unable to create the student. Please try again."),
       );
       setSubmitting(false);
@@ -156,11 +152,6 @@ export function CreateStudentDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-          {error ? (
-            <Alert variant="destructive" role="alert">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
           <div className="flex flex-col gap-2">
             <Label htmlFor="student-name">Full name</Label>
             <Input

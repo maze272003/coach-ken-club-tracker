@@ -25,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { AvatarField } from "@/components/shared/avatar-field";
 import { errorMessage } from "@/lib/format";
@@ -72,7 +71,6 @@ export function EditStudentDialog({
   const [joinedAt, setJoinedAt] = useState(initial.joinedAt);
   const [medicalNotes, setMedicalNotes] = useState(initial.medicalNotes);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const update = useMutation(api.students.update);
   const assignStudent = useMutation(api.groups.assignStudent);
@@ -82,7 +80,6 @@ export function EditStudentDialog({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) return;
-    setError(null);
     const parsed = profileSchema.safeParse({ name, image, status });
     if (!parsed.success) {
       const errors: Record<string, string> = {};
@@ -123,7 +120,9 @@ export function EditStudentDialog({
       setOpen(false);
       setSubmitting(false);
     } catch (err) {
-      setError(errorMessage(err, "Unable to update the student. Please try again."));
+      toast.error(
+        errorMessage(err, "Unable to update the student. Please try again."),
+      );
       setSubmitting(false);
     }
   }
@@ -145,11 +144,6 @@ export function EditStudentDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-          {error ? (
-            <Alert variant="destructive" role="alert">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
           <div className="flex flex-col gap-2">
             <Label htmlFor="edit-name">Full name</Label>
             <Input
@@ -317,14 +311,12 @@ export function ResetPasswordDialog({ studentId }: { studentId: string }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const resetPassword = useAction(api.students.resetPassword);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) return;
-    setError(null);
     const parsed = passwordSchema.safeParse({ password, confirmPassword });
     if (!parsed.success) {
       const errors: Record<string, string> = {};
@@ -348,7 +340,7 @@ export function ResetPasswordDialog({ studentId }: { studentId: string }) {
       setConfirmPassword("");
       setSubmitting(false);
     } catch (err) {
-      setError(
+      toast.error(
         errorMessage(err, "Unable to reset the password. Please try again."),
       );
       setSubmitting(false);
@@ -372,11 +364,6 @@ export function ResetPasswordDialog({ studentId }: { studentId: string }) {
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-          {error ? (
-            <Alert variant="destructive" role="alert">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
           <div className="flex flex-col gap-2">
             <Label htmlFor="reset-password">New password</Label>
             <Input

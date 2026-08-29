@@ -19,7 +19,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { errorMessage } from "@/lib/format";
 
 type PracticeInput = {
@@ -121,7 +120,6 @@ function PracticeForm({
   onClose: () => void;
 }) {
   const [form, setForm] = useState<Initial>(() => initialFor(groupId, practice));
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const create = useMutation(api.practices.create);
   const update = useMutation(api.practices.update);
@@ -140,24 +138,23 @@ function PracticeForm({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) return;
-    setError(null);
     const title = form.title.trim();
     const duration = Number(form.plannedDurationMinutes);
     const distance = form.plannedDistanceMeters.trim();
     if (title.length === 0) {
-      setError("Title is required.");
+      toast.warning("Title is required.");
       return;
     }
     if (!Number.isInteger(duration) || duration <= 0) {
-      setError("Planned duration must be a positive number of minutes.");
+      toast.warning("Planned duration must be a positive number of minutes.");
       return;
     }
     if (distance !== "" && !Number.isInteger(Number(distance))) {
-      setError("Planned distance must be a whole number of meters.");
+      toast.warning("Planned distance must be a whole number of meters.");
       return;
     }
     if (form.strokes.length === 0) {
-      setError("Select at least one skill.");
+      toast.warning("Select at least one skill.");
       return;
     }
 
@@ -183,7 +180,7 @@ function PracticeForm({
       onClose();
       setSubmitting(false);
     } catch (err) {
-      setError(
+      toast.error(
         errorMessage(err, "Unable to save the practice. Please try again."),
       );
       setSubmitting(false);
@@ -202,11 +199,6 @@ function PracticeForm({
         </DialogDescription>
       </DialogHeader>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-          {error ? (
-            <Alert variant="destructive" role="alert">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-2">
               <Label htmlFor="practice-date">Date</Label>

@@ -56,12 +56,10 @@ export default function CoachAttendancePage() {
   const [state, setState] = useState<{
     scope: string;
     overrides: Record<string, "present" | "late" | "absent">;
-    error: string | null;
-  }>({ scope, overrides: {}, error: null });
-  // Marks and errors belong to one (date, group) view — switching
-  // either starts a clean sheet without discarding saved records.
+  }>({ scope, overrides: {} });
+  // Marks belong to one (date, group) view — switching either starts a
+  // clean sheet without discarding saved records.
   const overrides = state.scope === scope ? state.overrides : {};
-  const error = state.scope === scope ? state.error : null;
   const [saving, setSaving] = useState(false);
 
   const groups = useQuery(api.groups.list, {});
@@ -114,7 +112,6 @@ export default function CoachAttendancePage() {
         ...(prev.scope === scope ? prev.overrides : {}),
         [studentId]: status,
       },
-      error: null,
     }));
   }
 
@@ -131,7 +128,6 @@ export default function CoachAttendancePage() {
         ...(prev.scope === scope ? prev.overrides : {}),
         ...next,
       },
-      error: null,
     }));
   }
 
@@ -144,25 +140,19 @@ export default function CoachAttendancePage() {
         status: row.status as "present" | "late" | "absent",
       }));
     if (entries.length === 0) {
-      setState((prev) => ({
-        scope,
-        overrides: prev.scope === scope ? prev.overrides : {},
-        error: "Mark at least one swimmer before saving.",
-      }));
+      toast.warning("Mark at least one swimmer before saving.");
       return;
     }
     setSaving(true);
     try {
       const result = await recordBulk({ date, entries });
       toast.success(`Roll call saved for ${result.recorded} swimmers.`);
-      setState({ scope, overrides: {}, error: null });
+      setState({ scope, overrides: {} });
       setSaving(false);
     } catch (err) {
-      setState({
-        scope,
-        overrides,
-        error: errorMessage(err, "Unable to save attendance. Please try again."),
-      });
+      toast.error(
+        errorMessage(err, "Unable to save attendance. Please try again."),
+      );
       setSaving(false);
     }
   }
@@ -232,12 +222,6 @@ export default function CoachAttendancePage() {
                 </Select>
               </div>
             </div>
-
-            {error ? (
-              <p className="text-sm text-destructive" role="alert">
-                {error}
-              </p>
-            ) : null}
 
             <div className="flex flex-wrap items-center gap-2">
               <Button
