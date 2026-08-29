@@ -1,3 +1,4 @@
+// app/student/training/page.tsx
 "use client";
 
 import { useQuery } from "convex/react";
@@ -6,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { TrainingSessionCard } from "@/components/shared/training-session-card";
+import { MyTrendsSection } from "@/components/student/my-trends-section";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function StudentTrainingPage() {
@@ -17,6 +19,8 @@ export default function StudentTrainingPage() {
         title="Training Sessions"
         description="Your complete training history."
       />
+
+      <MyTrendsSection />
 
       {sessions === undefined ? (
         <div className="grid gap-4 md:grid-cols-2">

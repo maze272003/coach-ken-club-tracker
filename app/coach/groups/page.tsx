@@ -8,7 +8,8 @@ import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { GroupFormDialog } from "@/components/coach/group-form-dialog";
-import { Card, CardContent } from "@/components/ui/card";
+import { VolumeLineChart } from "@/components/shared/charts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +17,7 @@ import { errorMessage } from "@/lib/format";
 
 export default function CoachGroupsPage() {
   const groups = useQuery(api.groups.list, {});
+  const teamTrends = useQuery(api.insights.teamTrends, {});
   const setStatus = useMutation(api.groups.setStatus);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +53,17 @@ export default function CoachGroupsPage() {
           {error}
         </p>
       ) : null}
+
+      {teamTrends !== undefined && teamTrends.volumeByGroup.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Volume by group (last 8 weeks)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <VolumeLineChart data={teamTrends.volumeByGroup} />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent>
