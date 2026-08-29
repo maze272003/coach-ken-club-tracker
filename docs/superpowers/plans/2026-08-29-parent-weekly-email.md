@@ -1,6 +1,6 @@
 # Parent Weekly Email Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Email every active student's full report card to their `parentEmail` every Monday 06:00 Manila time via Gmail SMTP, dripped through a queue, with a coach "send now" button.
 
@@ -32,7 +32,7 @@
 - Consumes: nothing new.
 - Produces: table `parentEmails` with fields `studentId: Id<"students">, weekStart: string, toEmail: string, payloadJson: string, status: "pending" | "sent" | "failed", attempts: number, lastError?: string, sentAt?: number, dueAt: number, createdAt: number`; indexes `by_week_and_student` (unique on `["weekStart", "studentId"]`), `by_status_and_due` (`["status", "dueAt"]`), `by_sentAt` (`["sentAt"]`). Later tasks insert/query these exact field names.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `convex/parent-emails-schema.test.ts`:
 
@@ -98,12 +98,12 @@ describe("parentEmails table", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run convex/parent-emails-schema.test.ts`
 Expected: FAIL — "parentEmails" is not a valid table (insert throws unknown table).
 
-- [ ] **Step 3: Add the table to the schema**
+- [x] **Step 3: Add the table to the schema**
 
 In `convex/schema.ts`, inside `defineSchema({ ... })`, after the `reports` table entry (before the closing `}),` of the schema object), add:
 
@@ -132,12 +132,12 @@ In `convex/schema.ts`, inside `defineSchema({ ... })`, after the `reports` table
 
 Note: `.unique()` must come directly after the `by_week_and_student` index and is terminal — that is why the unique index is declared last.
 
-- [ ] **Step 4: Regenerate types and run tests**
+- [x] **Step 4: Regenerate types and run tests**
 
 Run: `npx convex codegen; npx vitest run convex/parent-emails-schema.test.ts`
 Expected: 2 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add convex/schema.ts convex/parent-emails-schema.test.ts convex/_generated
@@ -160,7 +160,7 @@ git commit -m "feat(parent-emails): queue table with unique weekly key"
   - `export type AthleteCard = Infer<typeof athleteCardVal>`
   - `export async function buildAthleteCard(ctx: QueryCtx, student: Doc<"students">, today: string): Promise<AthleteCard>` — computes the full card without any auth check.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 In `convex/reports-card.test.ts`, add to the imports at the top:
 
@@ -192,12 +192,12 @@ describe("buildAthleteCard", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run convex/reports-card.test.ts`
 Expected: FAIL — cannot resolve "./lib/reportCard".
 
-- [ ] **Step 3: Create `convex/lib/reportCard.ts`**
+- [x] **Step 3: Create `convex/lib/reportCard.ts`**
 
 Create the file with the validator and computation moved verbatim from `convex/reports.ts` (lines 16–57 validator, 59–64 `ageFrom`, 80–193 body), re-parameterized on the `student` document:
 
@@ -390,7 +390,7 @@ export async function buildAthleteCard(
 }
 ```
 
-- [ ] **Step 4: Shrink `convex/reports.ts` to use the helper**
+- [x] **Step 4: Shrink `convex/reports.ts` to use the helper**
 
 In `convex/reports.ts`:
 
@@ -433,12 +433,12 @@ export const athleteCard = query({
 
 Leave `generateWeekly` and `list` below unchanged. If `weekStartsBack` or the stats imports are now unused in `reports.ts`, the imports above already drop them — verify no other usage remains in the file (`generateWeekly` does not use them).
 
-- [ ] **Step 5: Regenerate, typecheck, and run tests**
+- [x] **Step 5: Regenerate, typecheck, and run tests**
 
 Run: `npx convex codegen; npm run typecheck; npx vitest run convex/reports-card.test.ts convex/reports-weekly.test.ts`
 Expected: typecheck clean; all card/weekly tests PASS (the two original card tests are the refactor regression).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add convex/lib/reportCard.ts convex/reports.ts convex/reports-card.test.ts convex/_generated
@@ -459,7 +459,7 @@ git commit -m "refactor(reports): extract buildAthleteCard into lib/reportCard"
   - `export type ReportEmailPayload = { weekStart: string; card: AthleteCard }`
   - `export function renderReportEmail(payload: ReportEmailPayload): { subject: string; html: string; text: string }`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `convex/report-email.test.ts`:
 
@@ -523,12 +523,12 @@ describe("renderReportEmail", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run convex/report-email.test.ts`
 Expected: FAIL — cannot resolve "./lib/reportEmail".
 
-- [ ] **Step 3: Implement the renderer**
+- [x] **Step 3: Implement the renderer**
 
 Create `convex/lib/reportEmail.ts`:
 
@@ -673,12 +673,12 @@ Sent by CoachKen Tracker. Reply to this email to reach the coach.`;
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run convex/report-email.test.ts`
 Expected: PASS (1 test).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add convex/lib/reportEmail.ts convex/report-email.test.ts
@@ -698,12 +698,12 @@ git commit -m "feat(parent-emails): report card email renderer"
 - Consumes: env vars `SMTP_HOST` (default `smtp.gmail.com`), `SMTP_PORT` (default `465`), `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` (default `SMTP_USER`).
 - Produces (used by Task 6): `export async function sendMail(args: { to: string; subject: string; html: string; text: string }): Promise<{ ok: true; messageId: string } | { ok: false; error: string }>`
 
-- [ ] **Step 1: Install nodemailer**
+- [x] **Step 1: Install nodemailer**
 
 Run: `npm install nodemailer; npm install -D @types/nodemailer`
 Expected: package.json gains `"nodemailer"` in dependencies and `"@types/nodemailer"` in devDependencies.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `convex/mailer.test.ts`:
 
@@ -791,12 +791,12 @@ describe("sendMail", () => {
 });
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `npx vitest run convex/mailer.test.ts`
 Expected: FAIL — cannot resolve "./lib/mailer".
 
-- [ ] **Step 4: Implement the mailer**
+- [x] **Step 4: Implement the mailer**
 
 Create `convex/lib/mailer.ts`:
 
@@ -857,12 +857,12 @@ export async function sendMail(args: SendMailArgs): Promise<SendMailResult> {
 }
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `npx vitest run convex/mailer.test.ts`
 Expected: PASS (3 tests).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add package.json package-lock.json convex/lib/mailer.ts convex/mailer.test.ts
@@ -888,7 +888,7 @@ git commit -m "feat(parent-emails): gmail smtp mailer wrapper"
 
 NOTE for the implementer: `processBatch`, `kickIfPending`, `triggerNow`, and `weekStatus` are added to this same file in Tasks 6–7. Create the file in this task containing ONLY the queue core plus imports; later tasks append.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `convex/parent-emails-queue.test.ts`:
 
@@ -1074,12 +1074,12 @@ describe("parentEmails.hasPending", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run convex/parent-emails-queue.test.ts`
 Expected: FAIL — `internal.parentEmails` does not exist.
 
-- [ ] **Step 3: Implement the queue core**
+- [x] **Step 3: Implement the queue core**
 
 Create `convex/parentEmails.ts`:
 
@@ -1281,12 +1281,12 @@ export const hasPending = internalQuery({
 
 Note: `enqueueWeekly` references `internal.parentEmails.processBatch`, which Task 6 adds to this same file — the codegen + typecheck in this task would fail on the missing function, so in this task ONLY run vitest (convex-test resolves modules from disk at runtime, and the kick targets a function that exists after Task 6). Vitest does not typecheck. Run typecheck after Task 6.
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `npx vitest run convex/parent-emails-queue.test.ts`
 Expected: PASS (4 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add convex/parentEmails.ts convex/parent-emails-queue.test.ts
@@ -1307,7 +1307,7 @@ git commit -m "feat(parent-emails): enqueue, claim, and record queue mutations"
   - `processBatch: internalAction({ args: {}, returns: v.null(), useNode: true })` — sends one batch, records results, reschedules itself +DRIP_INTERVAL_MS if `hasPending`.
   - `kickIfPending: internalMutation, args: {}, returns: v.null()` — schedules `processBatch` now if any pending row exists (used by the Task 8 drain cron).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `convex/parent-emails-action.test.ts`:
 
@@ -1442,12 +1442,12 @@ describe("parentEmails.kickIfPending", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run convex/parent-emails-action.test.ts`
 Expected: FAIL — `internal.parentEmails.processBatch` / `kickIfPending` do not exist.
 
-- [ ] **Step 3: Append the action and drain to `convex/parentEmails.ts`**
+- [x] **Step 3: Append the action and drain to `convex/parentEmails.ts`**
 
 Extend the imports at the top of `convex/parentEmails.ts`:
 
@@ -1531,12 +1531,12 @@ export const kickIfPending = internalMutation({
 });
 ```
 
-- [ ] **Step 4: Regenerate, typecheck, run tests**
+- [x] **Step 4: Regenerate, typecheck, run tests**
 
 Run: `npx convex codegen; npm run typecheck; npx vitest run convex/parent-emails-action.test.ts convex/parent-emails-queue.test.ts`
 Expected: typecheck clean; all tests PASS (5 + 4).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add convex/parentEmails.ts convex/parent-emails-action.test.ts convex/_generated
@@ -1557,7 +1557,7 @@ git commit -m "feat(parent-emails): useNode drip sender with retry drain"
   - `triggerNow: mutation, args: {}, returns: v.object({ weekStart: v.string(), enqueued: v.number(), errors: v.array(v.object({ student: v.string(), error: v.string() })) })`
   - `weekStatus: query, args: {}, returns: v.object({ weekStart: v.string(), pending: v.number(), sent: v.number(), failed: v.number() })`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `convex/parent-emails-authz.test.ts`:
 
@@ -1646,12 +1646,12 @@ describe("parentEmails.weekStatus", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run convex/parent-emails-authz.test.ts`
 Expected: FAIL — `api.parentEmails` does not exist.
 
-- [ ] **Step 3: Append the public functions to `convex/parentEmails.ts`**
+- [x] **Step 3: Append the public functions to `convex/parentEmails.ts`**
 
 Extend the imports (merge into existing import blocks):
 
@@ -1709,12 +1709,12 @@ export const weekStatus = query({
 });
 ```
 
-- [ ] **Step 4: Regenerate, typecheck, run tests**
+- [x] **Step 4: Regenerate, typecheck, run tests**
 
 Run: `npx convex codegen; npm run typecheck; npx vitest run convex/parent-emails-authz.test.ts`
 Expected: typecheck clean; PASS (3 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add convex/parentEmails.ts convex/parent-emails-authz.test.ts convex/_generated
@@ -1732,7 +1732,7 @@ git commit -m "feat(parent-emails): coach triggerNow and weekStatus"
 - Consumes: `internal.parentEmails.enqueueWeekly` (Task 5), `internal.parentEmails.kickIfPending` (Task 6).
 - Produces: two registered crons — `parent-email-enqueue` at `"5 22 * * 0"` (Mon 06:05 Manila) and `parent-email-drain` at `"7-59/15 * * * *"` (:07/:22/:37/:52 every hour — avoids the top of the hour per the eslint rule).
 
-- [ ] **Step 1: Register the crons**
+- [x] **Step 1: Register the crons**
 
 Replace the contents of `convex/crons.ts` with:
 
@@ -1773,12 +1773,12 @@ crons.cron(
 export default crons;
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `npm run typecheck; npm run lint; npx vitest run convex/parent-emails-action.test.ts`
 Expected: typecheck and lint clean (no top-of-hour cron warnings); the kickIfPending drain test still passes.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add convex/crons.ts
@@ -1796,7 +1796,7 @@ git commit -m "feat(parent-emails): weekly enqueue and safety-drain crons"
 - Consumes: `api.parentEmails.triggerNow` and `api.parentEmails.weekStatus` (Task 7); existing `Button` component; `sonner` toasts (already used in the project).
 - Produces: "Send parent emails" button in the header actions and a one-line status strip under the header.
 
-- [ ] **Step 1: Add the button and status strip**
+- [x] **Step 1: Add the button and status strip**
 
 In `app/coach/reports/page.tsx`, update the imports:
 
@@ -1900,12 +1900,12 @@ export default function CoachReportsPage() {
 }
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `npm run typecheck; npm run lint`
 Expected: both clean. (Manual check optional: `npm run dev`, open `/coach/reports`, press "Send parent emails" — with SMTP secrets unset, rows become failures with "SMTP not configured", proving the pipeline runs end to end.)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/coach/reports/page.tsx
@@ -1924,7 +1924,7 @@ git commit -m "feat(parent-emails): coach send button and weekly status strip"
 - Consumes: nothing code-level.
 - Produces: documented env vars `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` and operator instructions.
 
-- [ ] **Step 1: Extend `.env.example`**
+- [x] **Step 1: Extend `.env.example`**
 
 Append to `.env.example`:
 
@@ -1938,7 +1938,7 @@ SMTP_PASS=
 MAIL_FROM=
 ```
 
-- [ ] **Step 2: Append the README section**
+- [x] **Step 2: Append the README section**
 
 Append to `README.md`:
 
@@ -1964,12 +1964,12 @@ Setup:
 4. To send immediately: **Reports → Send parent emails**.
 ```
 
-- [ ] **Step 3: Full verification**
+- [x] **Step 3: Full verification**
 
 Run: `npm run typecheck; npm run lint; npm test`
 Expected: typecheck clean, lint clean, ALL tests pass (existing suites plus the new `parent-emails-*`, `report-email`, `mailer`, and `reports-card` suites).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add .env.example README.md
