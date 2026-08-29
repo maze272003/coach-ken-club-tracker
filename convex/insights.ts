@@ -224,8 +224,11 @@ async function trendsForStudent(
     catalog.filter((s) => s.status === "active").map((s) => [s.key, s.name]),
   );
   const skillRadar = skills
-    .filter((s) => activeNames.has(s.stroke))
-    .map((s) => ({ label: activeNames.get(s.stroke)!, value: s.progress }))
+    .filter((s) => catalog.length === 0 || activeNames.has(s.stroke))
+    .map((s) => ({
+      label: activeNames.get(s.stroke) ?? s.stroke,
+      value: s.progress,
+    }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
   const eventsMap = new Map<

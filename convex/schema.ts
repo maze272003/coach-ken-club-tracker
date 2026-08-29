@@ -151,5 +151,10 @@ export default defineSchema({
     targetDate: v.optional(v.string()),
     updatedAt: v.number(),
   }).index("by_student_and_updated", ["studentId", "updatedAt"]),
+  reports: defineTable({
+    weekStart: v.string(),
+    payloadJson: v.string(),
+    createdAt: v.number(),
+  }).index("by_week_start", ["weekStart"]),
 });
 
