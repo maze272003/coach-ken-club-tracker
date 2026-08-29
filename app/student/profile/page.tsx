@@ -9,6 +9,7 @@ import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { StudentAvatar } from "@/components/shared/student-avatar";
+import { AvatarField } from "@/components/shared/avatar-field";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,12 +26,9 @@ import { errorMessage, formatDate } from "@/lib/format";
 
 const profileSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
-  image: z
-    .string()
-    .trim()
-    .url("Enter a valid URL")
-    .max(2048)
-    .or(z.literal("")),
+  // Either an http(s) link or a Convex storage ID from an upload;
+  // "" means the picture was removed. The server validates further.
+  image: z.string().max(2048),
 });
 
 export default function StudentProfilePage() {
@@ -58,7 +56,7 @@ export default function StudentProfilePage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (saving || profile === null) return;
+    if (saving || !profile) return;
     setError(null);
     const parsed = profileSchema.safeParse({ name, image });
     if (!parsed.success) {
@@ -75,7 +73,11 @@ export default function StudentProfilePage() {
     try {
       await updateProfile({
         name: parsed.data.name,
-        image: parsed.data.image === "" ? null : parsed.data.image,
+        // Only send the picture when it changed so a resolved storage
+        // URL is never written back over the stored reference.
+        ...(image !== (profile.image ?? "")
+          ? { image: parsed.data.image === "" ? null : parsed.data.image }
+          : {}),
       });
       toast.success("Profile updated.");
       setSaving(false);
@@ -157,22 +159,14 @@ export default function StudentProfilePage() {
                     <p className="text-xs text-destructive">{fieldErrors.name}</p>
                   ) : null}
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="profile-image">Avatar URL (optional)</Label>
-                  <Input
-                    id="profile-image"
-                    type="url"
-                    placeholder="https://…"
-                    value={image}
-                    onChange={(e) => setImage(e.target.value)}
-                    disabled={saving}
-                  />
-                  {fieldErrors.image ? (
-                    <p className="text-xs text-destructive">
-                      {fieldErrors.image}
-                    </p>
-                  ) : null}
-                </div>
+                <AvatarField
+                  idPrefix="student-profile"
+                  name={name}
+                  value={image}
+                  onChange={setImage}
+                  disabled={saving}
+                  error={fieldErrors.image}
+                />
                 <Button type="submit" disabled={saving}>
                   {saving ? "Saving…" : "Save Changes"}
                 </Button>

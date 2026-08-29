@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internalMutation, internalQuery, query } from "./_generated/server";
 import { getViewer } from "./lib/access";
+import { resolveImageUrl } from "./lib/images";
 
 export const currentUser = query({
   args: {},
@@ -23,7 +24,7 @@ export const currentUser = query({
       role: viewer.role,
       name: viewer.name ?? null,
       email: viewer.email ?? null,
-      image: viewer.image ?? null,
+      image: await resolveImageUrl(ctx, viewer.image),
     };
   },
 });

@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AvatarField } from "@/components/shared/avatar-field";
 import { errorMessage } from "@/lib/format";
 
 const createStudentSchema = z
@@ -50,6 +51,7 @@ type FormState = {
   groupId: string;
   dateOfBirth: string;
   sex: string;
+  image: string;
 };
 
 const initialState: FormState = {
@@ -61,6 +63,7 @@ const initialState: FormState = {
   groupId: "unassigned",
   dateOfBirth: "",
   sex: "unset",
+  image: "",
 };
 
 export function CreateStudentDialog({
@@ -116,6 +119,7 @@ export function CreateStudentDialog({
           : {}),
         ...(form.dateOfBirth ? { dateOfBirth: form.dateOfBirth } : {}),
         ...(form.sex !== "unset" ? { sex: form.sex as "M" | "F" } : {}),
+        ...(form.image ? { image: form.image } : {}),
       });
       toast.success("Student account created successfully.");
       setOpen(false);
@@ -174,6 +178,13 @@ export function CreateStudentDialog({
               </p>
             ) : null}
           </div>
+          <AvatarField
+            idPrefix="student-create"
+            name={form.name}
+            value={form.image}
+            onChange={(value) => update("image", value)}
+            disabled={submitting}
+          />
           <div className="flex flex-col gap-2">
             <Label htmlFor="student-email">Email</Label>
             <Input

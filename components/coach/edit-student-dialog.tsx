@@ -27,16 +27,14 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
+import { AvatarField } from "@/components/shared/avatar-field";
 import { errorMessage } from "@/lib/format";
 
 const profileSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
-  image: z
-    .string()
-    .trim()
-    .url("Enter a valid URL")
-    .max(2048)
-    .or(z.literal("")),
+  // Either an http(s) link or a Convex storage ID from an upload;
+  // "" means the picture was removed. The server validates further.
+  image: z.string().max(2048),
   status: z.enum(["active", "inactive"]),
 });
 
@@ -102,7 +100,11 @@ export function EditStudentDialog({
         studentId: studentId as never,
         name: parsed.data.name,
         status: parsed.data.status,
-        image: parsed.data.image === "" ? null : parsed.data.image,
+        // Only send the picture when it changed so a resolved storage
+        // URL is never written back over the stored reference.
+        ...(image !== initial.image
+          ? { image: parsed.data.image === "" ? null : parsed.data.image }
+          : {}),
         ...(dateOfBirth ? { dateOfBirth } : {}),
         ...(sex !== "unset" ? { sex: sex as "M" | "F" } : {}),
         ...(parentName ? { parentName } : {}),
@@ -160,20 +162,14 @@ export function EditStudentDialog({
               <p className="text-xs text-destructive">{fieldErrors.name}</p>
             ) : null}
           </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-image">Avatar URL (optional)</Label>
-            <Input
-              id="edit-image"
-              type="url"
-              placeholder="https://…"
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
-              disabled={submitting}
-            />
-            {fieldErrors.image ? (
-              <p className="text-xs text-destructive">{fieldErrors.image}</p>
-            ) : null}
-          </div>
+          <AvatarField
+            idPrefix="edit-student"
+            name={name}
+            value={image}
+            onChange={setImage}
+            disabled={submitting}
+            error={fieldErrors.image}
+          />
           <div className="flex flex-col gap-2">
             <Label htmlFor="edit-group">Training group</Label>
             <Select

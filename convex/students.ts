@@ -15,6 +15,7 @@ import {
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { requireCoach, requireStudent } from "./lib/access";
+import { assertImageRef, resolveImageUrl } from "./lib/images";
 import { attendanceStats, commitmentStats, overallProgress } from "./lib/stats";
 import {
   assertDateOfBirth,
@@ -179,7 +180,7 @@ export const list = query({
           userId: user._id,
           name,
           email,
-          image: user.image ?? null,
+          image: await resolveImageUrl(ctx, user.image),
           status: student.status,
           groupId: student.groupId ?? null,
           groupName: student.groupId
@@ -240,7 +241,7 @@ export const get = query({
       userId: user._id,
       name: user.name ?? "",
       email: user.email ?? "",
-      image: user.image ?? null,
+      image: await resolveImageUrl(ctx, user.image),
       status: student.status,
       groupId: student.groupId ?? null,
       groupName: group?.name ?? null,
@@ -280,7 +281,7 @@ export const create = action({
     const email = normalizeEmail(args.email);
     assertPassword(args.password);
     const image =
-      args.image !== undefined ? assertImageUrl(args.image) : undefined;
+      args.image !== undefined ? await assertImageRef(ctx, args.image) : undefined;
     const profile = validateProfileFields(args);
 
     const existing = await ctx.runQuery(internal.users.findByEmail, { email });
@@ -335,7 +336,7 @@ export const update = mutation({
     }
     if (args.image !== undefined) {
       userPatch.image =
-        args.image === null ? undefined : assertImageUrl(args.image);
+        args.image === null ? undefined : await assertImageRef(ctx, args.image);
     }
     if (args.name !== undefined || args.image !== undefined) {
       await ctx.db.patch("users", student.userId, userPatch);
@@ -404,7 +405,8 @@ export const updateOwnProfile = mutation({
     }
     if (args.image !== undefined) {
       await ctx.db.patch("users", self.user._id, {
-        image: args.image === null ? undefined : assertImageUrl(args.image),
+        image:
+          args.image === null ? undefined : await assertImageRef(ctx, args.image),
       });
     }
     return null;
@@ -433,7 +435,7 @@ export const myProfile = query({
     return {
       name: self.user.name ?? "",
       email: self.user.email ?? "",
-      image: self.user.image ?? null,
+      image: await resolveImageUrl(ctx, self.user.image),
       status: self.student.status,
       createdAtMs: self.student._creationTime,
       dateOfBirth: self.student.dateOfBirth ?? null,
@@ -446,16 +448,24 @@ export const myProfile = query({
   },
 });
 
-function assertImageUrl(value: string): string {
-  const url = value.trim();
-  if (url.length === 0 || url.length > 2048) {
-    throw new ConvexError("Invalid image URL");
-  }
-  if (!/^https?:\/\//i.test(url)) {
-    throw new ConvexError("Image URL must start with http:// or https://");
-  }
-  return url;
-}
+/**
+ * Signed upload URL for avatar images. The coach may upload on behalf of
+ * a student; students may upload for their own profile. The client POSTs
+ * the file to the returned URL and stores the returned storageId as the
+ * user's image reference.
+ */
+export const generateUploadUrl = mutation({
+  args: {},
+  returns: v.string(),
+  handler: async (ctx) => {
+    const coach = await requireCoach(ctx);
+    if (!coach) {
+      const student = await requireStudent(ctx);
+      if (!student) throw new ConvexError(NOT_AUTHORIZED);
+    }
+    return await ctx.storage.generateUploadUrl();
+  },
+});
 
 /**
  * Internal: creates the student profile row. Skill progress records
