@@ -23,6 +23,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StudentAvatar } from "@/components/shared/student-avatar";
 import { CompletePracticeDialog } from "@/components/coach/complete-practice-dialog";
+import { NeedsAttentionCard } from "@/components/coach/needs-attention-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -173,6 +174,8 @@ export default function CoachDashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      <NeedsAttentionCard />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1">

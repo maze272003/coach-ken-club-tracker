@@ -37,7 +37,7 @@ describe("coachAttentionFlags", () => {
           updatedAt: Date.now(),
         });
       }
-      await ctx.db.patch(idle, { joinedAt: datePlusDays(today, -40) });
+      await ctx.db.patch("students", idle, { joinedAt: datePlusDays(today, -40) });
     });
 
     const result = await t
