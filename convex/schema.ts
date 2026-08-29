@@ -156,5 +156,26 @@ export default defineSchema({
     payloadJson: v.string(),
     createdAt: v.number(),
   }).index("by_week_start", ["weekStart"]),
+  parentEmails: defineTable({
+    studentId: v.id("students"),
+    weekStart: v.string(),
+    toEmail: v.string(),
+    payloadJson: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("sent"),
+      v.literal("failed"),
+    ),
+    attempts: v.number(),
+    lastError: v.optional(v.string()),
+    sentAt: v.optional(v.number()),
+    dueAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_status_and_due", ["status", "dueAt"])
+    .index("by_sentAt", ["sentAt"])
+    .index("by_week_and_student", ["weekStart", "studentId"]),
 });
+
+
 
