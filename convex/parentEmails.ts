@@ -126,7 +126,7 @@ export const claimBatch = internalMutation({
       .take(Math.min(BATCH_SIZE, remaining));
     const now = Date.now();
     for (const row of due) {
-      await ctx.db.patch(row._id, { dueAt: now + DRIP_INTERVAL_MS });
+      await ctx.db.patch("parentEmails", row._id, { dueAt: now + DRIP_INTERVAL_MS });
     }
     return due.map((r) => ({
       _id: r._id,
@@ -159,17 +159,17 @@ export const recordResults = internalMutation({
       const row = await ctx.db.get("parentEmails", result.id);
       if (!row || row.status !== "pending") continue;
       if (result.ok) {
-        await ctx.db.patch(row._id, { status: "sent", sentAt: Date.now() });
+        await ctx.db.patch("parentEmails", row._id, { status: "sent", sentAt: Date.now() });
       } else {
         const attempts = row.attempts + 1;
         if (attempts >= MAX_ATTEMPTS) {
-          await ctx.db.patch(row._id, {
+          await ctx.db.patch("parentEmails", row._id, {
             status: "failed",
             attempts,
             lastError: result.error,
           });
         } else {
-          await ctx.db.patch(row._id, {
+          await ctx.db.patch("parentEmails", row._id, {
             attempts,
             lastError: result.error,
             dueAt: Date.now() + RETRY_BACKOFF_MS,

@@ -13,7 +13,7 @@ vi.mock("nodemailer", () => ({
 import { sendMail } from "./lib/mailer";
 
 const ENV_KEYS = ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "MAIL_FROM"] as const;
-let savedEnv: Record<string, string | undefined> = {};
+const savedEnv: Record<string, string | undefined> = {};
 
 beforeEach(() => {
   for (const key of ENV_KEYS) {
