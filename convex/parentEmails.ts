@@ -90,7 +90,7 @@ export const enqueueWeekly = internalMutation({
   handler: async (ctx) => {
     const weekStart = lastCompletedWeekStart();
     await enqueueEligible(ctx, weekStart);
-    await ctx.scheduler.runAfter(0, internal.parentEmails.processBatch, {});
+    await ctx.scheduler.runAfter(0, internal.parentEmailsActions.processBatch, {});
     return null;
   },
 });
@@ -189,5 +189,25 @@ export const hasPending = internalQuery({
       .withIndex("by_status_and_due", (q) => q.eq("status", "pending"))
       .first();
     return row !== null;
+  },
+});
+
+/**
+ * Safety drain (every 15 min): kicks processBatch if anything is
+ * pending. Recovers from a crashed processor and drives backoff
+ * retries. Cheap no-op when the queue is empty.
+ */
+export const kickIfPending = internalMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const row = await ctx.db
+      .query("parentEmails")
+      .withIndex("by_status_and_due", (q) => q.eq("status", "pending"))
+      .first();
+    if (row) {
+      await ctx.scheduler.runAfter(0, internal.parentEmailsActions.processBatch, {});
+    }
+    return null;
   },
 });

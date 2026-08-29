@@ -1,3 +1,5 @@
+"use node";
+
 // convex/lib/mailer.ts
 // Node-only module (imported exclusively by useNode actions).
 import nodemailer, { type Transporter } from "nodemailer";
