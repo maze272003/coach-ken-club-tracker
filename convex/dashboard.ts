@@ -5,12 +5,20 @@ import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { requireCoach, requireStudent } from "./lib/access";
 import { attendanceStats, overallProgress } from "./lib/stats";
+import {
+  daysBetween,
+  monthKeysBack,
+  todayInCoachTz,
+  weekStartIso,
+  weekStartsBack,
+} from "./lib/time";
+import { pbsInMonth } from "./lib/kpis";
 
 const NOT_AUTHORIZED = "Not authorized";
 
 /**
- * Coach-only: headline statistics and recent activity across
- * all swimmers.
+ * Coach-only: dashboard v2 — bounded KPI scans, goal deadlines,
+ * and the recent activity feed.
  */
 export const coachOverview = query({
   args: {},
@@ -18,9 +26,21 @@ export const coachOverview = query({
     stats: v.object({
       totalStudents: v.number(),
       activeStudents: v.number(),
-      averageAttendance: v.union(v.number(), v.null()),
-      totalSessions: v.number(),
+      pbsThisMonth: v.number(),
     }),
+    kpis: v.object({
+      attendanceThisMonth: v.union(v.number(), v.null()),
+      attendanceLastMonth: v.union(v.number(), v.null()),
+      volumeThisWeek: v.union(v.number(), v.null()),
+      volumeLastWeek: v.union(v.number(), v.null()),
+    }),
+    goalDeadlines: v.array(
+      v.object({
+        studentName: v.string(),
+        title: v.string(),
+        targetDate: v.string(),
+      }),
+    ),
     recentActivity: v.array(
       v.object({
         kind: v.union(
@@ -39,39 +59,82 @@ export const coachOverview = query({
     const coach = await requireCoach(ctx);
     if (!coach) throw new ConvexError(NOT_AUTHORIZED);
 
+    const today = todayInCoachTz();
+    const [lastMonth] = monthKeysBack(2, today);
+    const thisMonth = today.slice(0, 7);
+    const weekKeys = weekStartsBack(2, today);
+
     const students = await ctx.db.query("students").take(500);
-    const perStudent = await Promise.all(
-      students.map(async (student) => {
-        const [attendance] = await Promise.all([
-          attendanceStats(ctx, student._id),
-        ]);
-        return { student, attendance };
-      }),
-    );
+    const activeStudents = students.filter((s) => s.status === "active");
 
-    const totalStudents = students.length;
-    const activeStudents = students.filter((s) => s.status === "active").length;
-    const percentages = perStudent
-      .map((r) => r.attendance.percentage)
-      .filter((p): p is number => p !== null);
-    const averageAttendance =
-      percentages.length === 0
-        ? null
-        : Math.round(
-            percentages.reduce((a, b) => a + b, 0) / percentages.length,
-          );
+    const [attendance, sessions] = await Promise.all([
+      ctx.db
+        .query("attendance")
+        .withIndex("by_date", (q) => q.gte("date", `${lastMonth}-01`))
+        .take(10000),
+      ctx.db
+        .query("trainingSessions")
+        .withIndex("by_date", (q) => q.gte("date", weekKeys[0]!))
+        .take(5000),
+    ]);
 
-    const sessions = await ctx.db
-      .query("trainingSessions")
-      .withIndex("by_date")
-      .order("desc")
-      .take(10000);
-    const totalSessions = sessions.length;
+    const monthPct = (key: string): number | null => {
+      const records = attendance.filter((r) => r.date.slice(0, 7) === key);
+      if (records.length === 0) return null;
+      const attended = records.filter((r) => r.status !== "absent").length;
+      return Math.round((attended / records.length) * 100);
+    };
+
+    const weekVolume = (key: string): number | null => {
+      const inWeek = sessions.filter((s) => weekStartIso(s.date) === key);
+      if (inWeek.length === 0) return null;
+      return inWeek.reduce((acc, s) => acc + (s.distanceMeters ?? 0), 0);
+    };
+
+    let pbsThisMonth = 0;
+    for (const student of activeStudents) {
+      pbsThisMonth += await pbsInMonth(ctx, student._id, thisMonth);
+    }
+
+    const nameCache = new Map<string, string>();
+    const goalRows: { studentName: string; title: string; targetDate: string }[] = [];
+    for (const student of activeStudents) {
+      const goals = await ctx.db
+        .query("trainingGoals")
+        .withIndex("by_student_and_updated", (q) => q.eq("studentId", student._id))
+        .order("desc")
+        .take(20);
+      for (const goal of goals) {
+        if (goal.status === "completed" || goal.status === "archived") continue;
+        if (!goal.targetDate) continue;
+        const days = daysBetween(today, goal.targetDate);
+        if (days < 0 || days > 14) continue;
+        let name = nameCache.get(student._id);
+        if (name === undefined) {
+          const user = await ctx.db.get("users", student.userId);
+          name = user?.name ?? "Unknown";
+          nameCache.set(student._id, name);
+        }
+        goalRows.push({ studentName: name, title: goal.title, targetDate: goal.targetDate });
+      }
+    }
+    goalRows.sort((a, b) => a.targetDate.localeCompare(b.targetDate));
 
     const recentActivity = await buildRecentActivity(ctx);
 
     return {
-      stats: { totalStudents, activeStudents, averageAttendance, totalSessions },
+      stats: {
+        totalStudents: students.length,
+        activeStudents: activeStudents.length,
+        pbsThisMonth,
+      },
+      kpis: {
+        attendanceThisMonth: monthPct(thisMonth),
+        attendanceLastMonth: monthPct(lastMonth),
+        volumeThisWeek: weekVolume(weekKeys[1]!),
+        volumeLastWeek: weekVolume(weekKeys[0]!),
+      },
+      goalDeadlines: goalRows.slice(0, 10),
       recentActivity,
     };
   },
