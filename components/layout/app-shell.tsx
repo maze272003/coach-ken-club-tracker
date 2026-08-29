@@ -10,6 +10,7 @@ import {
   ClipboardCheck,
   Database,
   Dumbbell,
+  FileText,
   Gauge,
   LayoutDashboard,
   LogOutIcon,
@@ -42,6 +43,7 @@ export type NavIconName =
   | "CalendarDays"
   | "Database"
   | "Dumbbell"
+  | "FileText"
   | "Gauge"
   | "Target"
   | "Timer"
@@ -55,6 +57,7 @@ export type NavIconName =
   | "skills"
   | "goals"
   | "times"
+  | "reports"
   | "profile";
 
 const iconMap: Record<NavIconName, LucideIcon> = {
@@ -65,6 +68,7 @@ const iconMap: Record<NavIconName, LucideIcon> = {
   CalendarDays,
   Database,
   Dumbbell,
+  FileText,
   Gauge,
   Target,
   Timer,
@@ -78,6 +82,7 @@ const iconMap: Record<NavIconName, LucideIcon> = {
   skills: Gauge,
   goals: Target,
   times: Timer,
+  reports: FileText,
   profile: User,
 };
 

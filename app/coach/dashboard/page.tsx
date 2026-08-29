@@ -9,6 +9,7 @@ import {
   CalendarClock,
   ClipboardCheck,
   Dumbbell,
+  FileText,
   Gauge,
   Search,
   Target,
@@ -24,6 +25,10 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { StudentAvatar } from "@/components/shared/student-avatar";
 import { CompletePracticeDialog } from "@/components/coach/complete-practice-dialog";
 import { NeedsAttentionCard } from "@/components/coach/needs-attention-card";
+import {
+  WeeklyReportCard,
+  type WeeklyPayload,
+} from "@/components/coach/weekly-report-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +52,7 @@ const activityIcons = {
 
 export default function CoachDashboardPage() {
   const overview = useQuery(api.dashboard.coachOverview, {});
+  const reports = useQuery(api.reports.list, {});
   const [search, setSearch] = useState("");
   const students = useQuery(api.students.list, { search });
   const upcomingPractices = useQuery(api.practices.listUpcoming, {
@@ -176,6 +182,30 @@ export default function CoachDashboardPage() {
       </Card>
 
       <NeedsAttentionCard />
+
+      {reports !== undefined && reports.reports.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between gap-2 text-base">
+              <span className="flex items-center gap-2">
+                <FileText className="size-4 text-muted-foreground" aria-hidden="true" />
+                Last week
+              </span>
+              <Link
+                href="/coach/reports"
+                className="text-sm underline text-muted-foreground hover:text-foreground"
+              >
+                All reports
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <WeeklyReportCard
+              payload={JSON.parse(reports.reports[0]!.payloadJson) as WeeklyPayload}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1">

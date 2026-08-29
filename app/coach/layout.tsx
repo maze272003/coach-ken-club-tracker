@@ -10,6 +10,7 @@ const navItems: NavItem[] = [
   { href: "/coach/groups", label: "Groups", icon: "UsersRound" },
   { href: "/coach/practices", label: "Practices", icon: "CalendarClock" },
   { href: "/coach/times", label: "Times", icon: "Timer" },
+  { href: "/coach/reports", label: "Reports", icon: "FileText" },
   { href: "/coach/attendance", label: "Attendance", icon: "ClipboardCheck" },
   { href: "/coach/training", label: "Training", icon: "Dumbbell" },
   { href: "/coach/skills", label: "Skills", icon: "Gauge" },
