@@ -12,6 +12,8 @@ const navItems: NavItem[] = [
 
   { href: "/student/skills", label: "Skills", icon: "Gauge" },
   { href: "/student/goals", label: "Goals", icon: "Target" },
+
+  { href: "/docs", label: "Guide", icon: "BookOpen" },
   { href: "/student/profile", label: "Profile", icon: "User", exact: true },
 ];
 

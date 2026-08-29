@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 import {
+  BookOpen,
   CalendarClock,
   CalendarDays,
   ClipboardCheck,
@@ -49,6 +50,7 @@ export type NavIconName =
   | "Timer"
   | "User"
   | "UsersRound"
+  | "BookOpen"
   | "Waves"
   | "dashboard"
   | "students"
@@ -74,6 +76,7 @@ const iconMap: Record<NavIconName, LucideIcon> = {
   Timer,
   User,
   UsersRound,
+  BookOpen,
   Waves,
   dashboard: LayoutDashboard,
   students: Users,

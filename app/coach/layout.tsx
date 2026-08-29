@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
   { href: "/coach/goals", label: "Goals", icon: "Target" },
   { href: "/coach/data", label: "Data", icon: "Database" },
 
+  { href: "/docs", label: "Guide", icon: "BookOpen" },
   { href: "/coach/profile", label: "Profile", icon: "User", exact: true },
 ];
 
