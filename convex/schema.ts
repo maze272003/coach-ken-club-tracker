@@ -161,6 +161,7 @@ export default defineSchema({
     weekStart: v.string(),
     toEmail: v.string(),
     payloadJson: v.string(),
+    accessToken: v.optional(v.string()),
     status: v.union(
       v.literal("pending"),
       v.literal("sent"),
@@ -174,7 +175,8 @@ export default defineSchema({
   })
     .index("by_status_and_due", ["status", "dueAt"])
     .index("by_sentAt", ["sentAt"])
-    .index("by_week_and_student", ["weekStart", "studentId"]),
+    .index("by_week_and_student", ["weekStart", "studentId"])
+    .index("by_token", ["accessToken"]),
 });
 
 

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "./schema";
 import { modules } from "./test.setup";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { seedCoach, seedStudent } from "./tests/helpers";
 import {
   datePlusDays,
@@ -18,6 +18,7 @@ type EmailDoc = {
   weekStart: string;
   toEmail: string;
   payloadJson: string;
+  accessToken?: string;
   status: string;
   attempts: number;
   dueAt: number;
@@ -51,6 +52,7 @@ async function insertRow(
         weekStart: "2026-01-05",
         card: { student: { name: "X" } },
       }),
+      accessToken: "test-token-123",
       status: "pending",
       attempts: 0,
       dueAt: 0,
@@ -91,6 +93,7 @@ describe("parentEmails.enqueueWeekly", () => {
     expect(rows[0]!.weekStart).toBe(weekStart);
     expect(rows[0]!.toEmail).toBe("alex.parent@example.com");
     expect(rows[0]!.status).toBe("pending");
+    expect(typeof rows[0]!.accessToken).toBe("string");
     const payload = JSON.parse(
       (rows[0] as unknown as { payloadJson: string }).payloadJson,
     ) as { card: { student: { name: string } } };
@@ -175,5 +178,20 @@ describe("parentEmails.hasPending", () => {
     expect(await t.query(internal.parentEmails.hasPending, {})).toBe(false);
     await insertRow(t, studentId);
     expect(await t.query(internal.parentEmails.hasPending, {})).toBe(true);
+  });
+});
+
+describe("parentEmails.getByToken", () => {
+  it("returns report payload when token matches and null when invalid", async () => {
+    const t = convexTest(schema, modules);
+    const { studentId } = await seedStudent(t, "A");
+    await insertRow(t, studentId, { accessToken: "valid-secret-token" });
+
+    const found = await t.query(api.parentEmails.getByToken, { token: "valid-secret-token" });
+    expect(found).not.toBeNull();
+    expect(found?.weekStart).toBe("2026-01-05");
+
+    const missing = await t.query(api.parentEmails.getByToken, { token: "nonexistent-token" });
+    expect(missing).toBeNull();
   });
 });

@@ -1,7 +1,12 @@
 // convex/lib/reportEmail.ts
 import type { AthleteCard } from "./reportCard";
 
-export type ReportEmailPayload = { weekStart: string; card: AthleteCard };
+export type ReportEmailPayload = {
+  weekStart: string;
+  card: AthleteCard;
+  viewUrl?: string;
+  csvUrl?: string;
+};
 
 function esc(s: string): string {
   return s
@@ -11,7 +16,13 @@ function esc(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function formatTime(ms: number): string {
+function csvCell(val: string | number | null | undefined): string {
+  if (val === null || val === undefined) return '""';
+  const str = String(val);
+  return `"${str.replace(/"/g, '""')}"`;
+}
+
+export function formatTime(ms: number): string {
   if (ms <= 0) return "--:--.--";
   const totalHundredths = Math.round(ms / 10);
   const hundredths = totalHundredths % 100;
@@ -27,8 +38,62 @@ function formatTime(ms: number): string {
   return `${minutes}:${sStr}.${csStr}`;
 }
 
-function formatMeters(value: number | null): string {
+export function formatMeters(value: number | null): string {
   return value === null ? "(no distance recorded)" : `${value.toLocaleString("en-US")} m`;
+}
+
+/**
+ * Converts athlete card into standard CSV spreadsheet format with section headers.
+ */
+export function athleteCardToCsv(payload: { weekStart: string; card: AthleteCard }): string {
+  const { weekStart, card } = payload;
+  const lines: string[] = [];
+
+  lines.push(`${csvCell("Weekly Swim Report")}`);
+  lines.push(`${csvCell("Student")},${csvCell(card.student.name)}`);
+  lines.push(`${csvCell("Group")},${csvCell(card.groupName ?? "None")}`);
+  lines.push(`${csvCell("Age")},${csvCell(card.student.age ?? "N/A")}`);
+  lines.push(`${csvCell("Report Week")},${csvCell(weekStart)}`);
+  lines.push("");
+
+  lines.push(`${csvCell("ATTENDANCE & COMMITMENT")}`);
+  lines.push(`${csvCell("Metric")},${csvCell("Value")}`);
+  lines.push(`${csvCell("Sessions Attended")},${csvCell(`${card.attendance.attended} of ${card.attendance.total}`)}`);
+  lines.push(`${csvCell("Attendance Rate")},${csvCell(card.attendance.percentage !== null ? `${card.attendance.percentage}%` : "—")}`);
+  if (card.commitment) {
+    lines.push(`${csvCell("Held Practices Attended")},${csvCell(`${card.commitment.attended} of ${card.commitment.held}`)}`);
+    lines.push(`${csvCell("Commitment Rate")},${csvCell(card.commitment.percentage !== null ? `${card.commitment.percentage}%` : "—")}`);
+  }
+  lines.push("");
+
+  lines.push(`${csvCell("TRAINING VOLUME HISTORY")}`);
+  lines.push(`${csvCell("Week")},${csvCell("Meters")}`);
+  for (const vol of card.volumeByWeek) {
+    lines.push(`${csvCell(vol.label)},${csvCell(vol.value ?? 0)}`);
+  }
+  lines.push("");
+
+  lines.push(`${csvCell("STROKE SKILLS PROGRESS")}`);
+  lines.push(`${csvCell("Stroke")},${csvCell("Progress %")}`);
+  for (const skill of card.skills) {
+    lines.push(`${csvCell(skill.name)},${csvCell(`${skill.progress}%`)}`);
+  }
+  lines.push("");
+
+  lines.push(`${csvCell("PERSONAL BESTS")}`);
+  lines.push(`${csvCell("Event / Stroke")},${csvCell("Best Time")},${csvCell("Date Set")},${csvCell("Swims Recorded")}`);
+  for (const pb of card.pbs) {
+    lines.push(`${csvCell(pb.label)},${csvCell(formatTime(pb.bestTimeMs))},${csvCell(pb.bestDate)},${csvCell(pb.resultCount)}`);
+  }
+  lines.push("");
+
+  lines.push(`${csvCell("TRAINING GOALS")}`);
+  lines.push(`${csvCell("Goal Title")},${csvCell("Status")},${csvCell("Progress %")},${csvCell("Target Date")}`);
+  for (const goal of card.goals) {
+    lines.push(`${csvCell(goal.title)},${csvCell(goal.status)},${csvCell(`${goal.progress}%`)},${csvCell(goal.targetDate ?? "None")}`);
+  }
+
+  return lines.join("\r\n");
 }
 
 const SECTION_STYLE = "font-size:16px;font-weight:bold;margin:20px 0 6px 0;";
@@ -38,7 +103,7 @@ export function renderReportEmail(payload: ReportEmailPayload): {
   html: string;
   text: string;
 } {
-  const { weekStart, card } = payload;
+  const { weekStart, card, viewUrl, csvUrl } = payload;
   const subject = `Weekly Swim Report — ${card.student.name} (week of ${weekStart})`;
 
   const currentWeekLabel =
@@ -95,10 +160,29 @@ export function renderReportEmail(payload: ReportEmailPayload): {
     })
     .join("\n");
 
+  let actionButtonsHtml = "";
+  let actionButtonsText = "";
+  if (viewUrl || csvUrl) {
+    const buttons: string[] = [];
+    const textLinks: string[] = [];
+    if (viewUrl) {
+      buttons.push(`<a href="${esc(viewUrl)}" style="display:inline-block;background-color:#0284c7;color:#ffffff;text-decoration:none;padding:8px 14px;border-radius:6px;font-size:13px;font-weight:bold;margin-right:8px;">📄 View Online &amp; Print PDF</a>`);
+      textLinks.push(`View Online & Print PDF: ${viewUrl}`);
+    }
+    if (csvUrl) {
+      buttons.push(`<a href="${esc(csvUrl)}" style="display:inline-block;background-color:#16a34a;color:#ffffff;text-decoration:none;padding:8px 14px;border-radius:6px;font-size:13px;font-weight:bold;">📊 Download Excel / CSV</a>`);
+      textLinks.push(`Download Excel / CSV: ${csvUrl}`);
+    }
+    actionButtonsHtml = `<div style="margin:16px 0;padding:12px 0;border-top:1px solid #eee;border-bottom:1px solid #eee;">${buttons.join(" ")}</div>`;
+    actionButtonsText = `\nDOWNLOADS & ONLINE REPORT:\n${textLinks.join("\n")}\n`;
+  }
+
   const html = `<!doctype html>
-<html><body style="font-family:Arial,Helvetica,sans-serif;color:#222;max-width:560px;margin:0 auto;">
+<html><body style="font-family:Arial,Helvetica,sans-serif;color:#222;max-width:560px;margin:0 auto;padding:12px;">
 <h2 style="margin:0 0 4px 0;">Weekly Swim Report</h2>
-<p style="margin:0 0 16px 0;color:#555;">${esc(card.student.name)}${card.groupName ? ` — ${esc(card.groupName)}` : ""}${card.student.age !== null ? `, age ${card.student.age}` : ""} · week of ${esc(weekStart)}</p>
+<p style="margin:0 0 12px 0;color:#555;">${esc(card.student.name)}${card.groupName ? ` — ${esc(card.groupName)}` : ""}${card.student.age !== null ? `, age ${card.student.age}` : ""} · week of ${esc(weekStart)}</p>
+
+${actionButtonsHtml}
 
 <div style="${SECTION_STYLE}">Attendance</div>
 <p style="margin:0;">Attended ${card.attendance.attended} of ${card.attendance.total} sessions (${attendancePct})</p>
@@ -118,11 +202,13 @@ export function renderReportEmail(payload: ReportEmailPayload): {
 <div style="${SECTION_STYLE}">Goals</div>
 <ul style="margin:0;padding-left:20px;">${goalsHtml}</ul>
 
+${actionButtonsHtml}
+
 <p style="margin-top:24px;color:#888;font-size:12px;">Sent by CoachKen Tracker. Reply to this email to reach the coach.</p>
 </body></html>`;
 
   const text = `Weekly Swim Report — ${card.student.name}${card.groupName ? ` — ${card.groupName}` : ""}${card.student.age !== null ? `, age ${card.student.age}` : ""} (week of ${weekStart})
-
+${actionButtonsText}
 ATTENDANCE
 Attended ${card.attendance.attended} of ${card.attendance.total} sessions (${attendancePct})
 

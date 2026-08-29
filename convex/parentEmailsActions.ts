@@ -25,10 +25,26 @@ export const processBatch = internalAction({
     const claimed = await ctx.runMutation(internal.parentEmails.claimBatch, {});
     if (claimed.length === 0) return null;
 
+    const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "";
+    const base = siteUrl ? siteUrl.replace(/\/+$/, "") : "";
+
     const results: SendOutcome[] = [];
     for (const row of claimed) {
       const payload = JSON.parse(row.payloadJson) as ReportEmailPayload;
-      const { subject, html, text } = renderReportEmail(payload);
+      const viewUrl =
+        row.accessToken && base
+          ? `${base}/parent/report?token=${encodeURIComponent(row.accessToken)}`
+          : undefined;
+      const csvUrl =
+        row.accessToken && base
+          ? `${base}/api/parent-report/csv?token=${encodeURIComponent(row.accessToken)}`
+          : undefined;
+
+      const { subject, html, text } = renderReportEmail({
+        ...payload,
+        viewUrl,
+        csvUrl,
+      });
       const sent = await sendMail({ to: row.toEmail, subject, html, text });
       results.push(
         sent.ok

@@ -64,11 +64,13 @@ async function enqueueEligible(
       if (existing) continue;
       const card = await buildAthleteCard(ctx, student, todayInCoachTz());
       const payload: ReportEmailPayload = { weekStart, card };
+      const accessToken = crypto.randomUUID();
       await ctx.db.insert("parentEmails", {
         studentId: student._id,
         weekStart,
         toEmail: student.parentEmail!,
         payloadJson: JSON.stringify(payload),
+        accessToken,
         status: "pending",
         attempts: 0,
         dueAt: Date.now(),
@@ -109,6 +111,7 @@ export const claimBatch = internalMutation({
       _id: v.id("parentEmails"),
       toEmail: v.string(),
       payloadJson: v.string(),
+      accessToken: v.optional(v.string()),
     }),
   ),
   handler: async (ctx) => {
@@ -132,6 +135,7 @@ export const claimBatch = internalMutation({
       _id: r._id,
       toEmail: r.toEmail,
       payloadJson: r.payloadJson,
+      accessToken: r.accessToken,
     }));
   },
 });
@@ -256,6 +260,30 @@ export const weekStatus = query({
       pending: rows.filter((r) => r.status === "pending").length,
       sent: rows.filter((r) => r.status === "sent").length,
       failed: rows.filter((r) => r.status === "failed").length,
+    };
+  },
+});
+
+/** Public query to load report card by secure token for parent portal web view. */
+export const getByToken = query({
+  args: { token: v.string() },
+  returns: v.union(
+    v.null(),
+    v.object({
+      weekStart: v.string(),
+      payloadJson: v.string(),
+    }),
+  ),
+  handler: async (ctx, { token }) => {
+    if (!token) return null;
+    const row = await ctx.db
+      .query("parentEmails")
+      .withIndex("by_token", (q) => q.eq("accessToken", token))
+      .unique();
+    if (!row) return null;
+    return {
+      weekStart: row.weekStart,
+      payloadJson: row.payloadJson,
     };
   },
 });
