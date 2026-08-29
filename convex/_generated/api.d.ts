@@ -10,15 +10,22 @@
 
 import type * as attendance from "../attendance.js";
 import type * as auth from "../auth.js";
+import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
 import type * as dataOverview from "../dataOverview.js";
 import type * as goals from "../goals.js";
 import type * as groups from "../groups.js";
 import type * as http from "../http.js";
+import type * as insights from "../insights.js";
 import type * as lib_access from "../lib/access.js";
+import type * as lib_flags from "../lib/flags.js";
+import type * as lib_images from "../lib/images.js";
+import type * as lib_kpis from "../lib/kpis.js";
 import type * as lib_stats from "../lib/stats.js";
+import type * as lib_time from "../lib/time.js";
 import type * as lib_validation from "../lib/validation.js";
 import type * as practices from "../practices.js";
+import type * as reports from "../reports.js";
 import type * as seed from "../seed.js";
 import type * as skills from "../skills.js";
 import type * as students from "../students.js";
@@ -36,15 +43,22 @@ import type {
 declare const fullApi: ApiFromModules<{
   attendance: typeof attendance;
   auth: typeof auth;
+  crons: typeof crons;
   dashboard: typeof dashboard;
   dataOverview: typeof dataOverview;
   goals: typeof goals;
   groups: typeof groups;
   http: typeof http;
+  insights: typeof insights;
   "lib/access": typeof lib_access;
+  "lib/flags": typeof lib_flags;
+  "lib/images": typeof lib_images;
+  "lib/kpis": typeof lib_kpis;
   "lib/stats": typeof lib_stats;
+  "lib/time": typeof lib_time;
   "lib/validation": typeof lib_validation;
   practices: typeof practices;
+  reports: typeof reports;
   seed: typeof seed;
   skills: typeof skills;
   students: typeof students;
