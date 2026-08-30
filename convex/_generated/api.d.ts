@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as accountEmailsActions from "../accountEmailsActions.js";
 import type * as attendance from "../attendance.js";
 import type * as auth from "../auth.js";
 import type * as crons from "../crons.js";
@@ -18,6 +19,7 @@ import type * as groups from "../groups.js";
 import type * as http from "../http.js";
 import type * as insights from "../insights.js";
 import type * as lib_access from "../lib/access.js";
+import type * as lib_accountEmail from "../lib/accountEmail.js";
 import type * as lib_flags from "../lib/flags.js";
 import type * as lib_images from "../lib/images.js";
 import type * as lib_kpis from "../lib/kpis.js";
@@ -46,6 +48,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  accountEmailsActions: typeof accountEmailsActions;
   attendance: typeof attendance;
   auth: typeof auth;
   crons: typeof crons;
@@ -56,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   insights: typeof insights;
   "lib/access": typeof lib_access;
+  "lib/accountEmail": typeof lib_accountEmail;
   "lib/flags": typeof lib_flags;
   "lib/images": typeof lib_images;
   "lib/kpis": typeof lib_kpis;

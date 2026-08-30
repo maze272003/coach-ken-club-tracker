@@ -306,6 +306,23 @@ export const create = action({
         ...profile,
       },
     );
+
+    const siteUrl =
+      process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "";
+    const base = siteUrl ? siteUrl.replace(/\/+$/, "") : "";
+    const loginUrl = base ? `${base}/login` : "/login";
+
+    await ctx.scheduler.runAfter(
+      0,
+      internal.accountEmailsActions.sendAccountCreationEmail,
+      {
+        toEmail: email,
+        name,
+        password: args.password,
+        loginUrl,
+      },
+    );
+
     return { studentId };
   },
 });
