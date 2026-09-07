@@ -292,6 +292,7 @@ const DEFAULT_SKILLS = [
   { key: "backstroke", name: "Backstroke" },
   { key: "breaststroke", name: "Breaststroke" },
   { key: "butterfly", name: "Butterfly" },
+  { key: "im", name: "Individual Medley" },
 ];
 
 function titleCaseKey(key: string): string {

@@ -209,7 +209,7 @@ test("seed:status reports counts and demo account presence", async () => {
   const status = await t.query(api.seed.status, {});
   expect(status.counts.groups).toBe(2);
   expect(status.counts.practicesCancelled).toBe(0);
-  expect(status.demoAccounts.length).toBe(4);
+  expect(status.demoAccounts.length).toBe(12);
   expect(status.demoAccounts.every((account) => !account.exists)).toBe(true);
 
   await t.run(async (ctx) => {
