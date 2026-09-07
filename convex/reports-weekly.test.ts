@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "./schema";
 import { modules } from "./test.setup";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { seedCoach, seedStudent } from "./tests/helpers";
 import { datePlusDays, todayInCoachTz, weekStartIso } from "./lib/time";
 
@@ -71,3 +71,32 @@ describe("reports.generateWeekly", () => {
     expect(payload.errors).toEqual([]);
   });
 });
+
+describe("reports.list", () => {
+  it("returns recent weekly reports for coach", async () => {
+    const t = convexTest(schema, modules);
+    const coachId = await seedCoach(t);
+    const today = todayInCoachTz();
+    const weekStart = weekStartIso(datePlusDays(today, -1));
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("reports", {
+        weekStart,
+        payloadJson: JSON.stringify({
+          weekStart,
+          team: { practicesHeld: 0, attendancePct: null, volumeMeters: 0, pbs: 0, flagsRaised: 0 },
+          groups: [],
+          errors: [],
+        }),
+        createdAt: Date.now(),
+      });
+    });
+
+    const res = await t.withIdentity({ subject: coachId }).query(api.reports.list, {});
+    expect(res.reports).toHaveLength(1);
+    expect(res.reports[0]!._id).toBeDefined();
+    expect(res.reports[0]!._creationTime).toBeDefined();
+    expect(res.reports[0]!.weekStart).toBe(weekStart);
+  });
+});
+

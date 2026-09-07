@@ -185,6 +185,7 @@ export const list = query({
     reports: v.array(
       v.object({
         _id: v.id("reports"),
+        _creationTime: v.number(),
         weekStart: v.string(),
         payloadJson: v.string(),
         createdAt: v.number(),

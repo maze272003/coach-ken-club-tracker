@@ -2,19 +2,31 @@ import { redirect } from "next/navigation";
 import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
-import { AppShell, type NavItem } from "@/components/layout/app-shell";
+import { AppShell, type NavGroup } from "@/components/layout/app-shell";
 
-const navItems: NavItem[] = [
-  { href: "/student/dashboard", label: "Dashboard", icon: "LayoutDashboard", exact: true },
-  { href: "/student/attendance", label: "Attendance", icon: "ClipboardCheck" },
-  { href: "/student/times", label: "Times & PBs", icon: "Timer" },
-  { href: "/student/training", label: "Training Sessions", icon: "CalendarDays" },
-
-  { href: "/student/skills", label: "Skills", icon: "Gauge" },
-  { href: "/student/goals", label: "Goals", icon: "Target" },
-
-  { href: "/docs", label: "Guide", icon: "BookOpen" },
-  { href: "/student/profile", label: "Profile", icon: "User", exact: true },
+const navGroups: NavGroup[] = [
+  {
+    items: [
+      { href: "/student/dashboard", label: "Dashboard", icon: "LayoutDashboard", exact: true },
+    ],
+  },
+  {
+    title: "Training & Progress",
+    items: [
+      { href: "/student/attendance", label: "Attendance", icon: "ClipboardCheck" },
+      { href: "/student/training", label: "Training Sessions", icon: "CalendarDays" },
+      { href: "/student/times", label: "Times & PBs", icon: "Timer" },
+      { href: "/student/skills", label: "Skills", icon: "Gauge" },
+      { href: "/student/goals", label: "Goals", icon: "Target" },
+    ],
+  },
+  {
+    title: "Account & Docs",
+    items: [
+      { href: "/docs", label: "User Guide", icon: "BookOpen" },
+      { href: "/student/profile", label: "Profile", icon: "User", exact: true },
+    ],
+  },
 ];
 
 export default async function StudentLayout({
@@ -32,7 +44,7 @@ export default async function StudentLayout({
   }
   return (
     <AppShell
-      navItems={navItems}
+      navGroups={navGroups}
       user={{ name: user.name, email: user.email, image: user.image }}
     >
       {children}
