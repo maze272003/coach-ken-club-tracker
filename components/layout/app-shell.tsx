@@ -34,6 +34,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export type NavIconName =
@@ -127,9 +128,11 @@ function initials(name: string | null): string {
 
 function NavLinks({
   groups,
+  collapsed,
   onNavigate,
 }: {
   groups: NavGroup[];
+  collapsed?: boolean;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
@@ -140,10 +143,13 @@ function NavLinks({
           key={group.title ?? `group-${groupIdx}`}
           className="flex flex-col gap-1"
         >
-          {group.title && (
+          {group.title && !collapsed && (
             <div className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
               {group.title}
             </div>
+          )}
+          {group.title && collapsed && groupIdx > 0 && (
+            <div className="mx-2 my-1 h-px bg-border" role="separator" />
           )}
           <div className="flex flex-col gap-0.5">
             {group.items.map((item) => {
@@ -157,9 +163,13 @@ function NavLinks({
                   key={item.href}
                   href={item.href}
                   onClick={onNavigate}
+                  title={collapsed ? item.label : undefined}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
+                    "group relative flex items-center rounded-lg text-sm font-medium transition-all duration-150",
+                    collapsed
+                      ? "size-9 justify-center self-center px-0"
+                      : "gap-3 px-3 py-2",
                     active
                       ? "bg-primary text-primary-foreground shadow-xs font-semibold"
                       : "text-muted-foreground hover:bg-accent/80 hover:text-foreground",
@@ -174,8 +184,10 @@ function NavLinks({
                     )}
                     aria-hidden="true"
                   />
-                  <span className="truncate">{item.label}</span>
-                  {item.badge !== undefined && (
+                  {!collapsed && (
+                    <span className="truncate">{item.label}</span>
+                  )}
+                  {item.badge !== undefined && !collapsed && (
                     <span
                       className={cn(
                         "ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none tabular-nums",
@@ -187,6 +199,12 @@ function NavLinks({
                       {item.badge}
                     </span>
                   )}
+                  {item.badge !== undefined && collapsed && (
+                    <span
+                      className="absolute top-1 right-1 size-1.5 rounded-full bg-destructive"
+                      aria-label={String(item.badge)}
+                    />
+                  )}
                 </Link>
               );
             })}
@@ -197,29 +215,40 @@ function NavLinks({
   );
 }
 
-function Brand() {
+function Brand({ showText = true }: { showText?: boolean }) {
   return (
     <Link href="/" className="group flex items-center gap-2.5 px-1 py-1">
-      <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs transition-transform group-hover:scale-105">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs transition-transform group-hover:scale-105">
         <Waves className="size-4" aria-hidden="true" />
       </span>
-      <div className="flex min-w-0 flex-col">
-        <span className="text-sm font-semibold tracking-tight text-foreground">
+      {showText && (
+        <span className="truncate text-sm font-semibold tracking-tight text-foreground">
           CoachKen Tracker
         </span>
-      </div>
+      )}
     </Link>
   );
 }
 
-function UserFooter({ user }: { user: ShellUser }) {
+function UserFooter({
+  user,
+  collapsed = false,
+}: {
+  user: ShellUser;
+  collapsed?: boolean;
+}) {
   const { signOut } = useAuthActions();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
 
   return (
-    <div className="flex items-center gap-3 border-t bg-muted/20 px-3 py-3">
-      <Avatar className="size-8.5 ring-1 ring-border/50">
+    <div
+      className={cn(
+        "flex border-t bg-muted/20 px-3 py-3",
+        collapsed ? "flex-col items-center gap-2" : "items-center gap-3",
+      )}
+    >
+      <Avatar className="size-8.5 shrink-0 ring-1 ring-border/50">
         {user.image ? (
           <AvatarImage src={user.image} alt={user.name ?? "User"} />
         ) : null}
@@ -227,16 +256,18 @@ function UserFooter({ user }: { user: ShellUser }) {
           {initials(user.name)}
         </AvatarFallback>
       </Avatar>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium leading-tight text-foreground">
-          {user.name ?? "Account"}
-        </p>
-        {user.email ? (
-          <p className="truncate text-xs text-muted-foreground">
-            {user.email}
+      {!collapsed && (
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium leading-tight text-foreground">
+            {user.name ?? "Account"}
           </p>
-        ) : null}
-      </div>
+          {user.email ? (
+            <p className="truncate text-xs text-muted-foreground">
+              {user.email}
+            </p>
+          ) : null}
+        </div>
+      )}
       <Button
         variant="ghost"
         size="icon"
@@ -264,6 +295,7 @@ export function AppShell({
   user,
   children,
 }: AppShellProps) {
+  const [isOpen, setIsOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const groups: NavGroup[] = useMemo(() => {
@@ -277,22 +309,41 @@ export function AppShell({
   }, [navGroups, navItems]);
 
   return (
-    <div className="min-h-svh bg-muted/30">
+    <div className="flex min-h-svh bg-muted/30">
       <aside
-        className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r bg-background lg:flex"
+        className={cn(
+          "sticky top-0 z-30 hidden h-svh shrink-0 flex-col border-r bg-background transition-all duration-300 ease-in-out lg:flex",
+          isOpen ? "w-64" : "w-16",
+        )}
         aria-label="Sidebar"
       >
-        <div className="flex h-14 items-center border-b px-4">
-          <Brand />
+        <div
+          className={cn(
+            "flex h-16 shrink-0 items-center border-b",
+            isOpen ? "justify-between px-4" : "justify-center px-2",
+          )}
+        >
+          {isOpen && <Brand />}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsOpen((v) => !v)}
+            aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
+            aria-expanded={isOpen}
+          >
+            <MenuIcon className="size-5" aria-hidden="true" />
+          </Button>
         </div>
-        <div className="flex-1 overflow-y-auto px-3 py-3">
-          <NavLinks groups={groups} />
-        </div>
-        <UserFooter user={user} />
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="px-3 py-3">
+            <NavLinks groups={groups} collapsed={!isOpen} />
+          </div>
+        </ScrollArea>
+        <UserFooter user={user} collapsed={!isOpen} />
       </aside>
 
-      <div className="flex min-h-svh flex-col lg:pl-64">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur lg:hidden">
+      <div className="flex min-h-svh min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur lg:hidden">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
               <Button
@@ -303,8 +354,8 @@ export function AppShell({
                 <MenuIcon className="size-5" aria-hidden="true" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="flex w-64 flex-col p-0">
-              <SheetHeader className="flex h-14 items-center border-b px-4 text-left">
+            <SheetContent side="left" className="w-64 gap-0 p-0">
+              <SheetHeader className="flex h-16 shrink-0 items-center border-b px-4 text-left">
                 <SheetTitle asChild>
                   <div>
                     <Brand />
@@ -314,18 +365,18 @@ export function AppShell({
                   Navigation menu
                 </SheetDescription>
               </SheetHeader>
-              <div className="flex flex-1 flex-col justify-between overflow-y-auto">
+              <ScrollArea className="min-h-0 flex-1">
                 <div className="px-3 py-3">
                   <NavLinks
                     groups={groups}
                     onNavigate={() => setMobileOpen(false)}
                   />
                 </div>
-                <UserFooter user={user} />
-              </div>
+              </ScrollArea>
+              <UserFooter user={user} />
             </SheetContent>
           </Sheet>
-          <span className="text-sm font-semibold tracking-tight">
+          <span className="truncate text-sm font-semibold tracking-tight">
             CoachKen Tracker
           </span>
         </header>
